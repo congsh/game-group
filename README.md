@@ -1,46 +1,83 @@
-# Getting Started with Create React App
+# 游戏组队平台
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+一个基于 React + EdgeOne + LeanCloud 的游戏组队网页应用。
 
-## Available Scripts
+## 功能特性
 
-In the project directory, you can run:
+- 📝 简单昵称登录
+- 🎮 游戏库管理（增删改查）
+- 📊 批量导入游戏（CSV/JSON/文本格式）
+- 🔍 游戏搜索筛选排序
+- ❤️ 游戏收藏和点赞
+- 🗳️ 每日投票选择游戏 ✅
+- 👥 周末组队匹配 ✅
 
-### `npm start`
+## 技术栈
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **前端**: React 18 + TypeScript
+- **UI库**: Ant Design
+- **状态管理**: Zustand
+- **后端**: LeanCloud BaaS
+- **部署**: 腾讯云 EdgeOne
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## 快速开始
 
-### `npm test`
+```bash
+# 安装依赖
+npm install
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# 启动开发服务器
+npm start
 
-### `npm run build`
+# 构建生产版本
+npm run build
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 项目结构
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```
+src/
+├── components/          # 通用组件
+├── pages/              # 页面组件
+├── store/              # 状态管理
+├── services/           # API服务
+├── types/              # 类型定义
+├── utils/              # 工具函数
+└── App.tsx             # 主应用组件
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 文档
 
-### `npm run eject`
+- [开发文档](./docs/DEVELOPMENT.md) - 技术实现详情
+- [设计文档](./docs/DESIGN.md) - 产品设计说明
+- [进度文档](./docs/PROGRESS.md) - 开发进度追踪
+- [批量导入指南](./docs/BATCH_IMPORT_GUIDE.md) - 批量导入功能使用说明
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## 主要功能
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 🎮 游戏库管理
+- 完整的CRUD操作
+- 搜索、筛选、排序功能
+- 收藏和点赞系统
+- 权限控制（只能编辑自己添加的游戏）
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### 📊 批量导入
+- 支持CSV文件导入
+- 支持JSON文件导入
+- 支持文本格式导入
+- 实时预览和错误处理
+- 提供示例文件下载
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### 🗳️ 每日投票
+- 每日游戏投票功能
+- 实时投票统计和排行
+- 投票历史记录
+- 基于投票的偏好分析
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 👥 周末组队
+- 创建周末游戏组队
+- 加入/离开组队活动
+- 组队详情查看
+- 队长权限管理
+- 智能推荐匹配（基于投票偏好）
+- 周末日期限制和时间选择 

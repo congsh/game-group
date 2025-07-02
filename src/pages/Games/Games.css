@@ -1,0 +1,241 @@
+/* 游戏库页面样式 */
+
+.games-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* 页面头部 */
+.games-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.games-header h2 {
+  margin-bottom: 8px;
+  color: #1890ff;
+}
+
+/* 筛选区域 */
+.games-filters {
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.games-filters .ant-card-body {
+  padding: 16px;
+}
+
+/* 游戏卡片 */
+.game-card {
+  height: 100%;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.game-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.game-card .ant-card-body {
+  padding: 16px;
+}
+
+.game-card .ant-card-actions {
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+}
+
+.game-card .ant-card-actions li {
+  margin: 8px 0;
+}
+
+/* 游戏标题 */
+.game-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.game-title span {
+  font-weight: 600;
+  font-size: 16px;
+  color: #262626;
+  flex: 1;
+  margin-right: 8px;
+}
+
+/* 游戏描述 */
+.game-description {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-players {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.game-type {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.game-desc {
+  margin-top: 8px;
+}
+
+.game-desc .ant-typography {
+  margin-bottom: 0;
+  color: #8c8c8c;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* 分页 */
+.games-pagination {
+  margin-top: 32px;
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* 空状态 */
+.games-empty {
+  margin: 48px 0;
+  text-align: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .games-page {
+    padding: 16px;
+  }
+  
+  .games-header {
+    margin-bottom: 16px;
+  }
+  
+  .games-filters {
+    margin-bottom: 16px;
+  }
+  
+  .games-filters .ant-card-body {
+    padding: 12px;
+  }
+  
+  .game-card .ant-card-body {
+    padding: 12px;
+  }
+  
+  .game-title span {
+    font-size: 14px;
+  }
+  
+  .games-pagination {
+    margin-top: 24px;
+  }
+}
+
+@media (max-width: 576px) {
+  .games-page {
+    padding: 12px;
+  }
+  
+  .games-filters .ant-row {
+    gap: 8px 0 !important;
+  }
+  
+  .game-card {
+    margin-bottom: 12px;
+  }
+  
+  .games-pagination .ant-pagination {
+    font-size: 12px;
+  }
+  
+  .games-pagination .ant-pagination-options {
+    display: none;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .games-filters {
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.08);
+  }
+  
+  .game-card {
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.08);
+  }
+  
+  .game-card:hover {
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* 加载状态 */
+.games-loading {
+  text-align: center;
+  padding: 48px 0;
+}
+
+/* 筛选按钮组 */
+.games-filters .ant-space {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .games-filters .ant-space {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .games-filters .ant-space .ant-btn {
+    width: 100%;
+  }
+}
+
+/* 游戏表单对话框 */
+.ant-modal .ant-form-item-label > label {
+  font-weight: 600;
+}
+
+/* 标签样式优化 */
+.game-title .ant-tag {
+  margin-left: 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+
+.game-type .ant-tag {
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 2px 8px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* 操作按钮优化 */
+.game-card .ant-card-actions .ant-btn {
+  border: none;
+  box-shadow: none;
+  height: auto;
+  padding: 4px 8px;
+}
+
+.game-card .ant-card-actions .ant-btn:hover {
+  background: #e6f7ff;
+}
+
+.game-card .ant-card-actions .ant-btn.ant-btn-dangerous:hover {
+  background: #fff2f0;
+} 

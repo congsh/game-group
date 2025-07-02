@@ -1,0 +1,122 @@
+[
+  {
+    "name": "王者荣耀",
+    "minPlayers": 5,
+    "maxPlayers": 5,
+    "platform": "移动端",
+    "type": "MOBA",
+    "description": "腾讯旗下的5V5公平竞技手游"
+  },
+  {
+    "name": "英雄联盟",
+    "minPlayers": 5,
+    "maxPlayers": 5,
+    "platform": "PC",
+    "type": "MOBA",
+    "description": "全球最受欢迎的MOBA游戏"
+  },
+  {
+    "name": "Among Us",
+    "minPlayers": 4,
+    "maxPlayers": 10,
+    "platform": "PC",
+    "type": "推理",
+    "description": "太空主题的多人社交推理游戏"
+  },
+  {
+    "name": "剧本杀",
+    "minPlayers": 4,
+    "maxPlayers": 8,
+    "platform": "线下",
+    "type": "推理",
+    "description": "沉浸式角色扮演推理游戏"
+  },
+  {
+    "name": "狼人杀",
+    "minPlayers": 6,
+    "maxPlayers": 12,
+    "platform": "线下",
+    "type": "推理",
+    "description": "经典的语言推理游戏"
+  },
+  {
+    "name": "密室逃脱",
+    "minPlayers": 2,
+    "maxPlayers": 6,
+    "platform": "线下",
+    "type": "解谜",
+    "description": "团队协作解谜游戏"
+  },
+  {
+    "name": "桌游大富翁",
+    "minPlayers": 2,
+    "maxPlayers": 8,
+    "platform": "线下",
+    "type": "策略",
+    "description": "经典房地产投资桌面游戏"
+  },
+  {
+    "name": "UNO",
+    "minPlayers": 2,
+    "maxPlayers": 10,
+    "platform": "线下",
+    "type": "卡牌",
+    "description": "简单有趣的卡牌游戏"
+  },
+  {
+    "name": "我的世界",
+    "minPlayers": 1,
+    "maxPlayers": 8,
+    "platform": "PC",
+    "type": "沙盒",
+    "description": "创造性沙盒建造游戏"
+  },
+  {
+    "name": "CS:GO",
+    "minPlayers": 5,
+    "maxPlayers": 5,
+    "platform": "PC",
+    "type": "射击",
+    "description": "经典竞技射击游戏"
+  },
+  {
+    "name": "守望先锋2",
+    "minPlayers": 6,
+    "maxPlayers": 6,
+    "platform": "PC",
+    "type": "射击",
+    "description": "团队竞技射击游戏"
+  },
+  {
+    "name": "绝地求生",
+    "minPlayers": 1,
+    "maxPlayers": 4,
+    "platform": "PC",
+    "type": "大逃杀",
+    "description": "经典吃鸡大逃杀游戏"
+  },
+  {
+    "name": "原神",
+    "minPlayers": 1,
+    "maxPlayers": 4,
+    "platform": "多平台",
+    "type": "RPG",
+    "description": "开放世界冒险游戏"
+  },
+  {
+    "name": "和平精英",
+    "minPlayers": 1,
+    "maxPlayers": 4,
+    "platform": "移动端",
+    "type": "大逃杀",
+    "description": "移动端吃鸡游戏"
+  },
+  {
+    "name": "元气骑士",
+    "minPlayers": 1,
+    "maxPlayers": 4,
+    "platform": "移动端",
+    "type": "动作",
+    "description": "像素风动作冒险游戏"
+  }
+] 

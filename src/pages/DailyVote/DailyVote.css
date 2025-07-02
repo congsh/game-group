@@ -1,0 +1,134 @@
+.daily-vote-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.daily-vote-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.daily-vote-header h2 {
+  color: #1890ff;
+  margin-bottom: 8px;
+}
+
+.daily-vote-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+}
+
+.vote-form-card .ant-card-body {
+  padding: 24px;
+}
+
+.vote-stats-card .ant-statistic {
+  text-align: center;
+}
+
+.vote-stats-card .ant-statistic-title {
+  font-size: 14px;
+  color: #666;
+}
+
+.vote-stats-card .ant-statistic-content {
+  color: #1890ff;
+}
+
+.game-ranking-list .ant-list-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.game-ranking-list .ant-list-item:last-child {
+  border-bottom: none;
+}
+
+.vote-status-alert {
+  margin-bottom: 16px;
+}
+
+.selected-games-tags {
+  margin-top: 8px;
+}
+
+.selected-games-tags .ant-tag {
+  margin-bottom: 4px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .daily-vote-container {
+    padding: 16px;
+  }
+  
+  .daily-vote-header {
+    margin-bottom: 24px;
+  }
+  
+  .vote-form-card,
+  .vote-stats-card {
+    margin-bottom: 16px;
+  }
+}
+
+/* 投票状态样式 */
+.vote-status-voted {
+  border: 2px solid #52c41a;
+  background-color: #f6ffed;
+}
+
+.vote-status-pending {
+  border: 2px solid #faad14;
+  background-color: #fffbe6;
+}
+
+/* 统计卡片美化 */
+.stats-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.stats-card .ant-statistic-title {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.stats-card .ant-statistic-content {
+  color: white;
+}
+
+/* 游戏选择器美化 */
+.game-selector .ant-select-selector {
+  min-height: 80px;
+}
+
+.game-selector .ant-select-selection-overflow {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* 排行榜样式 */
+.ranking-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 0;
+}
+
+.ranking-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.ranking-item-right {
+  color: #666;
+  font-size: 12px;
+} 

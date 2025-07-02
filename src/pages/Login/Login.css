@@ -1,0 +1,49 @@
+/**
+ * 登录页面样式
+ */
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-header .ant-typography h2 {
+  margin-bottom: 8px;
+  color: #1890ff;
+}
+
+.login-tips {
+  text-align: center;
+  margin-top: 24px;
+  padding: 16px;
+  background: #f6f8fa;
+  border-radius: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 10px;
+  }
+  
+  .login-card {
+    padding: 16px;
+  }
+} 
