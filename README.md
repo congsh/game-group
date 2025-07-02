@@ -33,6 +33,27 @@ npm start
 npm run build
 ```
 
+## 部署
+
+### 部署到 EdgeOne
+
+项目已经配置好了 EdgeOne 部署：
+
+1. **构建项目**
+   ```bash
+   npm run build
+   ```
+
+2. **上传到 EdgeOne**
+   - 登录 EdgeOne 控制台
+   - 创建新的静态网站项目
+   - 上传 `build/` 目录中的所有文件
+
+3. **配置路由重定向**
+   - 添加规则：`/* -> /index.html` (状态码 200)
+
+详细部署指南请参考 [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
+
 ## 项目结构
 
 ```
