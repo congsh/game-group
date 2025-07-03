@@ -16,15 +16,56 @@ import { initWeekendTeamTable, initSampleGames } from '../utils/initData';
  */
 export const createWeekendTeam = async (teamForm: TeamForm, leaderId: string): Promise<WeekendTeam> => {
   try {
+    console.log('开始创建组队，游戏ID:', teamForm.gameId);
+    
+    // 验证游戏ID格式
+    if (!teamForm.gameId || typeof teamForm.gameId !== 'string') {
+      throw new Error('无效的游戏ID');
+    }
+
     // 获取游戏信息以确定最大成员数
-    const gameQuery = new AV.Query('Game');
-    const game = await gameQuery.get(teamForm.gameId);
-    const maxMembers = game.get('maxPlayers') || 4;
+    let game: any;
+    let maxMembers = 4; // 默认值
+    
+    try {
+      const gameQuery = new AV.Query('Game');
+      game = await gameQuery.get(teamForm.gameId);
+      maxMembers = game.get('maxPlayers') || 4;
+      console.log('获取到游戏信息:', {
+        gameId: teamForm.gameId,
+        gameName: game.get('name'),
+        maxPlayers: maxMembers
+      });
+    } catch (gameError: any) {
+      console.error('获取游戏信息失败:', gameError);
+      
+      if (gameError.code === 404 || gameError.message?.includes('Object not found')) {
+        // 游戏不存在的具体错误处理
+        throw new Error(`选择的游戏不存在，可能已被删除。请刷新页面重新选择游戏。`);
+      } else if (gameError.code === 403) {
+        // 权限问题
+        throw new Error('没有权限访问该游戏，请检查游戏权限设置。');
+      } else {
+        // 其他错误
+        throw new Error(`获取游戏信息失败: ${gameError.message || '未知错误'}`);
+      }
+    }
 
     // 获取当前用户昵称
     const currentUser = AV.User.current();
-    const leaderName = currentUser?.get('username') || `用户${leaderId.slice(-6)}`;
+    if (!currentUser) {
+      throw new Error('用户未登录，无法创建组队');
+    }
+    
+    const leaderName = currentUser.get('username') || currentUser.get('nickname') || `用户${leaderId.slice(-6)}`;
+    console.log('创建组队的队长信息:', { leaderId, leaderName });
 
+    // 验证表单数据
+    if (!teamForm.eventDate || !teamForm.startTime || !teamForm.endTime) {
+      throw new Error('缺少必要的组队信息（日期或时间）');
+    }
+
+    // 创建组队记录
     const team = new AV.Object('WeekendTeam');
     team.set('game', teamForm.gameId);
     team.set('eventDate', teamForm.eventDate);
@@ -37,7 +78,18 @@ export const createWeekendTeam = async (teamForm: TeamForm, leaderId: string): P
     team.set('maxMembers', maxMembers);
     team.set('status', 'open');
 
+    console.log('准备保存组队记录:', {
+      gameId: teamForm.gameId,
+      eventDate: teamForm.eventDate,
+      startTime: teamForm.startTime,
+      endTime: teamForm.endTime,
+      leaderId,
+      leaderName,
+      maxMembers
+    });
+
     const result = await team.save();
+    console.log('组队创建成功:', result.id);
 
     return {
       objectId: result.id || '',
@@ -52,9 +104,36 @@ export const createWeekendTeam = async (teamForm: TeamForm, leaderId: string): P
       createdAt: result.get('createdAt'),
       updatedAt: result.get('updatedAt'),
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('创建组队失败:', error);
-    throw error;
+    
+    // 如果是我们自定义的错误，直接抛出
+    if (error.message && (
+      error.message.includes('游戏不存在') || 
+      error.message.includes('用户未登录') ||
+      error.message.includes('无效的游戏ID') ||
+      error.message.includes('缺少必要的组队信息') ||
+      error.message.includes('没有权限访问')
+    )) {
+      throw error;
+    }
+    
+    // 如果是WeekendTeam表不存在的错误，尝试初始化表
+    if (error.code === 404 && error.message?.includes('WeekendTeam')) {
+      console.log('WeekendTeam表不存在，尝试自动创建...');
+      try {
+        await initWeekendTeamTable();
+        console.log('WeekendTeam表创建成功，重新尝试创建组队...');
+        // 重新调用创建组队函数
+        return await createWeekendTeam(teamForm, leaderId);
+      } catch (initError) {
+        console.error('自动创建WeekendTeam表失败:', initError);
+        throw new Error('数据表初始化失败，请联系管理员');
+      }
+    }
+    
+    // 其他未知错误
+    throw new Error(`创建组队失败: ${error.message || '未知错误，请重试'}`);
   }
 };
 
