@@ -59,22 +59,43 @@ const formatDate = (date: Date): string => {
  */
 export const getGameFavoriteReport = async (query: ReportQuery): Promise<GameFavoriteReport> => {
   try {
-    // 获取所有游戏及其收藏统计
+    console.log('开始获取收藏报表数据...');
+    
+    // 获取所有游戏
     const gameQuery = new AV.Query('Game');
     const games = await gameQuery.find();
+    console.log(`获取到${games.length}个游戏`);
 
     // 获取用户收藏数据
     let favorites: any[] = [];
     try {
+      console.log('开始查询UserFavorite表...');
+      console.log('查询参数:', {
+        startDate: query.startDate,
+        endDate: query.endDate,
+        timeRange: query.timeRange
+      });
+      
       const favoriteQuery = new AV.Query('UserFavorite');
-      if (query.startDate && query.endDate) {
-        favoriteQuery.greaterThanOrEqualTo('createdAt', new Date(query.startDate));
-        favoriteQuery.lessThanOrEqualTo('createdAt', new Date(query.endDate));
-      }
+      // 暂时先不加时间筛选，查询所有收藏数据
+      // 如果有具体的时间范围需求，再在结果中筛选
+      // if (query.startDate && query.endDate) {
+      //   favoriteQuery.greaterThanOrEqualTo('createdAt', new Date(query.startDate));
+      //   favoriteQuery.lessThanOrEqualTo('createdAt', new Date(query.endDate));
+      // }
       favoriteQuery.limit(10000);
       favorites = await favoriteQuery.find();
+      
+      console.log(`✅ 成功获取到${favorites.length}条收藏记录`);
+      console.log('收藏记录详情（前3条）:', favorites.slice(0, 3).map(fav => ({
+        id: fav.id,
+        user: fav.get('user'),
+        game: fav.get('game'),
+        createdAt: fav.get('createdAt'),
+        toJSON: fav.toJSON()
+      })));
     } catch (error: any) {
-      console.warn('UserFavorite表不存在，尝试自动创建...');
+      console.warn('UserFavorite表查询失败:', error);
       if (error.code === 404) {
         try {
           await initUserFavoriteTable();
@@ -86,6 +107,7 @@ export const getGameFavoriteReport = async (query: ReportQuery): Promise<GameFav
           }
           favoriteQuery.limit(10000);
           favorites = await favoriteQuery.find();
+          console.log(`重新获取到${favorites.length}条收藏记录`);
         } catch (initError) {
           console.warn('UserFavorite表创建失败，使用空数据:', initError);
           favorites = [];
@@ -96,17 +118,28 @@ export const getGameFavoriteReport = async (query: ReportQuery): Promise<GameFav
       }
     }
 
-    // 计算游戏收藏排行榜
+    // 从实际收藏数据计算游戏收藏统计
+    const gameNameMap = new Map<string, string>();
     const gameFavoriteMap = new Map<string, number>();
     const gameLikeMap = new Map<string, number>();
-    const gameNameMap = new Map<string, string>();
 
+    // 初始化游戏信息
     games.forEach(game => {
       const gameId = game.id!;
       gameNameMap.set(gameId, game.get('name'));
-      gameFavoriteMap.set(gameId, game.get('favoriteCount') || 0);
+      gameFavoriteMap.set(gameId, 0); // 从0开始计算
       gameLikeMap.set(gameId, game.get('likeCount') || 0);
     });
+
+    // 统计实际收藏数
+    favorites.forEach(favorite => {
+      const gameId = favorite.get('game');
+      if (gameId && gameFavoriteMap.has(gameId)) {
+        gameFavoriteMap.set(gameId, (gameFavoriteMap.get(gameId) || 0) + 1);
+      }
+    });
+
+    console.log('游戏收藏统计:', Array.from(gameFavoriteMap.entries()).filter(([_, count]) => count > 0));
 
     const topFavoriteGames = Array.from(gameFavoriteMap.entries())
       .map(([gameId, favoriteCount]) => ({
@@ -116,14 +149,19 @@ export const getGameFavoriteReport = async (query: ReportQuery): Promise<GameFav
         likeCount: gameLikeMap.get(gameId) || 0,
         hotScore: (favoriteCount * 2) + (gameLikeMap.get(gameId) || 0)
       }))
+      .filter(game => game.favoriteCount > 0) // 只显示有收藏的游戏
       .sort((a, b) => b.hotScore - a.hotScore)
       .slice(0, 10);
+
+    console.log('热门收藏游戏:', topFavoriteGames);
 
     // 计算用户收藏数量分布
     const userFavoriteCountMap = new Map<string, number>();
     favorites.forEach(favorite => {
       const userId = favorite.get('user');
-      userFavoriteCountMap.set(userId, (userFavoriteCountMap.get(userId) || 0) + 1);
+      if (userId) {
+        userFavoriteCountMap.set(userId, (userFavoriteCountMap.get(userId) || 0) + 1);
+      }
     });
 
     const userFavoriteDistribution = [
@@ -166,7 +204,7 @@ export const getGameFavoriteReport = async (query: ReportQuery): Promise<GameFav
     const averageFavoritesPerGame = totalGames > 0 ? totalFavorites / totalGames : 0;
     const mostFavoritedGame = topFavoriteGames.length > 0 ? topFavoriteGames[0].gameName : '暂无';
 
-    return {
+    const result = {
       topFavoriteGames,
       userFavoriteDistribution,
       favoriteTrend,
@@ -177,9 +215,30 @@ export const getGameFavoriteReport = async (query: ReportQuery): Promise<GameFav
         mostFavoritedGame
       }
     };
+
+    console.log('收藏报表结果:', result);
+    return result;
   } catch (error) {
     console.error('获取游戏收藏报表失败:', error);
-    throw error;
+    
+    // 返回空数据以避免页面崩溃
+    return {
+      topFavoriteGames: [],
+      userFavoriteDistribution: [
+        { range: '0', userCount: 0 },
+        { range: '1-5', userCount: 0 },
+        { range: '6-10', userCount: 0 },
+        { range: '11-20', userCount: 0 },
+        { range: '20+', userCount: 0 }
+      ],
+      favoriteTrend: [],
+      summary: {
+        totalGames: 0,
+        totalFavorites: 0,
+        averageFavoritesPerGame: 0,
+        mostFavoritedGame: '暂无'
+      }
+    };
   }
 };
 
@@ -478,14 +537,42 @@ export const getVoteReport = async (query: ReportQuery): Promise<VoteReport> => 
  */
 export const getTeamReport = async (query: ReportQuery): Promise<TeamReport> => {
   try {
+    console.log('开始获取组队报表数据...');
+    console.log('查询参数:', {
+      startDate: query.startDate,
+      endDate: query.endDate,
+      timeRange: query.timeRange
+    });
+    
     // 获取组队数据
     const teamQuery = new AV.Query('WeekendTeam');
-    if (query.startDate && query.endDate) {
-      teamQuery.greaterThanOrEqualTo('createdAt', new Date(query.startDate));
-      teamQuery.lessThanOrEqualTo('createdAt', new Date(query.endDate));
-    }
+    console.log('组队查询条件:', {
+      hasTimeFilter: !!(query.startDate && query.endDate),
+      startDate: query.startDate,
+      endDate: query.endDate
+    });
+    
+    // 暂时移除时间筛选，查询所有数据
+    // if (query.startDate && query.endDate) {
+    //   teamQuery.greaterThanOrEqualTo('createdAt', new Date(query.startDate));
+    //   teamQuery.lessThanOrEqualTo('createdAt', new Date(query.endDate));
+    //   console.log('应用时间筛选条件:', new Date(query.startDate), '到', new Date(query.endDate));
+    // } else {
+      console.log('暂时不应用时间筛选，查询所有组队数据');
+    // }
+    
     teamQuery.limit(10000);
     const teams = await teamQuery.find();
+    console.log(`✅ 成功获取到${teams.length}支组队`);
+    console.log('组队记录详情（前3条）:', teams.slice(0, 3).map(team => ({
+      id: team.id,
+      game: team.get('game'),
+      leader: team.get('leader'),
+      members: team.get('members'),
+      eventDate: team.get('eventDate'),
+      createdAt: team.get('createdAt'),
+      toJSON: team.toJSON()
+    })));
 
     // 获取游戏信息
     const gameQuery = new AV.Query('Game');
@@ -494,6 +581,42 @@ export const getTeamReport = async (query: ReportQuery): Promise<TeamReport> => 
     games.forEach(game => {
       gameNameMap.set(game.id!, game.get('name'));
     });
+
+    // 获取用户信息
+    const allUserIds = new Set<string>();
+    teams.forEach(team => {
+      const leader = team.get('leader');
+      const members = team.get('members') || [];
+      if (leader) allUserIds.add(leader);
+      members.forEach((memberId: string) => {
+        if (memberId) allUserIds.add(memberId);
+      });
+    });
+
+    console.log(`需要获取${allUserIds.size}个用户信息`);
+    
+    const userNameMap = new Map<string, string>();
+    if (allUserIds.size > 0) {
+      try {
+        const userQuery = new AV.Query('_User');
+        userQuery.containedIn('objectId', Array.from(allUserIds));
+        userQuery.limit(1000);
+        const users = await userQuery.find();
+        console.log(`获取到${users.length}个用户信息`);
+        
+        users.forEach(user => {
+          const userId = user.id!;
+          const nickname = user.get('nickname') || user.get('username') || `用户${userId.slice(-4)}`;
+          userNameMap.set(userId, nickname);
+        });
+      } catch (error) {
+        console.warn('获取用户信息失败:', error);
+        // 使用简化用户名
+        allUserIds.forEach(userId => {
+          userNameMap.set(userId, `用户${userId.slice(-4)}`);
+        });
+      }
+    }
 
     // 计算基本统计
     const totalTeams = teams.length;
@@ -578,13 +701,15 @@ export const getTeamReport = async (query: ReportQuery): Promise<TeamReport> => 
     const userParticipation = Array.from(userParticipationMap.entries())
       .map(([userId, stats]) => ({
         userId,
-        username: `用户${userId.slice(-4)}`,
+        username: userNameMap.get(userId) || `用户${userId.slice(-4)}`,
         teamsJoined: stats.teamsJoined,
         teamsCreated: stats.teamsCreated,
         participationRate: totalTeams > 0 ? (stats.teamsJoined + stats.teamsCreated) / totalTeams : 0
       }))
       .sort((a, b) => (b.teamsJoined + b.teamsCreated) - (a.teamsJoined + a.teamsCreated))
       .slice(0, 10);
+
+    console.log('用户参与统计:', userParticipation);
 
     const timeDistribution = Array.from(timeSlotMap.entries())
       .map(([timeSlot, stats]) => ({
@@ -623,7 +748,7 @@ export const getTeamReport = async (query: ReportQuery): Promise<TeamReport> => 
         });
       });
 
-    return {
+    const result = {
       teamStats: {
         totalTeams,
         totalParticipants,
@@ -635,9 +760,25 @@ export const getTeamReport = async (query: ReportQuery): Promise<TeamReport> => 
       timeDistribution,
       teamTrend
     };
+
+    console.log('组队报表结果:', result);
+    return result;
   } catch (error) {
     console.error('获取组队报表失败:', error);
-    throw error;
+    
+    // 返回空数据以避免页面崩溃
+    return {
+      teamStats: {
+        totalTeams: 0,
+        totalParticipants: 0,
+        averageTeamSize: 0,
+        completionRate: 0
+      },
+      gamePopularity: [],
+      userParticipation: [],
+      timeDistribution: [],
+      teamTrend: []
+    };
   }
 };
 

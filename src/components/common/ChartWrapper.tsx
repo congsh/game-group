@@ -38,7 +38,7 @@ interface ChartWrapperProps extends ChartConfig {
 /**
  * 图表包装组件
  */
-export const ChartWrapper: React.FC<ChartWrapperProps> = ({
+const ChartWrapperComponent: React.FC<ChartWrapperProps> = ({
   title,
   option,
   height = 400,
@@ -58,6 +58,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
       // 销毁现有图表实例
       if (chartInstanceRef.current) {
         chartInstanceRef.current.dispose();
+        chartInstanceRef.current = null;
       }
 
       // 创建新的图表实例
@@ -68,14 +69,19 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
 
       // 处理窗口大小变化
       const handleResize = () => {
-        chartInstanceRef.current?.resize();
+        if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+          chartInstanceRef.current.resize();
+        }
       };
 
       window.addEventListener('resize', handleResize);
 
       return () => {
         window.removeEventListener('resize', handleResize);
-        chartInstanceRef.current?.dispose();
+        if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+          chartInstanceRef.current.dispose();
+        }
+        chartInstanceRef.current = null;
       };
     }
   }, [option]);
@@ -84,7 +90,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
    * 处理加载状态
    */
   useEffect(() => {
-    if (chartInstanceRef.current) {
+    if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
       if (loading) {
         chartInstanceRef.current.showLoading();
       } else {
@@ -92,6 +98,18 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
       }
     }
   }, [loading]);
+
+  /**
+   * 组件卸载时清理ECharts实例
+   */
+  useEffect(() => {
+    return () => {
+      if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+        chartInstanceRef.current.dispose();
+      }
+      chartInstanceRef.current = null;
+    };
+  }, []);
 
   return (
     <Card 
@@ -314,5 +332,21 @@ export const createMultiBarChartOption = (
     }))
   };
 };
+
+/**
+ * 使用React.memo优化的图表包装组件
+ */
+export const ChartWrapper = React.memo(ChartWrapperComponent, (prevProps, nextProps) => {
+  // 只有在关键props真正改变时才重新渲染
+  return (
+    prevProps.title === nextProps.title &&
+    prevProps.height === nextProps.height &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.className === nextProps.className &&
+    prevProps.titleLevel === nextProps.titleLevel &&
+    prevProps.bordered === nextProps.bordered &&
+    JSON.stringify(prevProps.option) === JSON.stringify(nextProps.option)
+  );
+});
 
 export default ChartWrapper; 

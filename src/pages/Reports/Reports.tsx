@@ -3,7 +3,7 @@
  * 提供数据统计和可视化报表功能
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   Row,
@@ -231,6 +231,7 @@ const Reports: React.FC = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
             <ChartWrapper
+              key="favorite-games-bar"
               title="游戏收藏排行榜"
               option={createBarChartOption(
                 topFavoriteGames.slice(0, 8),
@@ -243,6 +244,7 @@ const Reports: React.FC = () => {
           </Col>
           <Col xs={24} lg={12}>
             <ChartWrapper
+              key="favorite-distribution-pie"
               title="用户收藏数量分布"
               option={createPieChartOption(
                 userFavoriteDistribution,
@@ -255,6 +257,7 @@ const Reports: React.FC = () => {
           </Col>
           <Col xs={24}>
             <ChartWrapper
+              key="favorite-trend-line"
               title="收藏趋势（最近30天）"
               option={createLineChartOption(
                 favoriteTrend,
@@ -344,6 +347,7 @@ const Reports: React.FC = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
             <ChartWrapper
+              key="vote-games-bar"
               title="游戏得票排行榜"
               option={createBarChartOption(
                 topVotedGames.slice(0, 8),
@@ -356,6 +360,7 @@ const Reports: React.FC = () => {
           </Col>
           <Col xs={24} lg={12}>
             <ChartWrapper
+              key="vote-users-bar"
               title="用户投票活跃度"
               option={createBarChartOption(
                 userActivity.slice(0, 8),
@@ -368,6 +373,7 @@ const Reports: React.FC = () => {
           </Col>
           <Col xs={24}>
             <ChartWrapper
+              key="vote-trend-multi"
               title="投票参与趋势"
               option={createMultiBarChartOption(
                 participationStats.slice(-30), // 最近30天
@@ -460,6 +466,7 @@ const Reports: React.FC = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
             <ChartWrapper
+              key="team-games-bar"
               title="游戏组队热度"
               option={createBarChartOption(
                 gamePopularity.slice(0, 8),
@@ -472,6 +479,7 @@ const Reports: React.FC = () => {
           </Col>
           <Col xs={24} lg={12}>
             <ChartWrapper
+              key="team-time-pie"
               title="时间段分布"
               option={createPieChartOption(
                 timeDistribution,
@@ -484,6 +492,7 @@ const Reports: React.FC = () => {
           </Col>
           <Col xs={24}>
             <ChartWrapper
+              key="team-trend-multi"
               title="组队趋势（按周统计）"
               option={createMultiBarChartOption(
                 teamTrend.slice(-12), // 最近12周
@@ -572,6 +581,7 @@ const Reports: React.FC = () => {
           onChange={setActiveTab}
           type="card"
           size="large"
+          destroyInactiveTabPane={false}
         >
           <TabPane
             tab={
@@ -581,8 +591,9 @@ const Reports: React.FC = () => {
               </span>
             }
             key="favorite"
+            forceRender={false}
           >
-            {renderGameFavoriteReport()}
+            {activeTab === 'favorite' && renderGameFavoriteReport()}
           </TabPane>
           <TabPane
             tab={
@@ -592,8 +603,9 @@ const Reports: React.FC = () => {
               </span>
             }
             key="vote"
+            forceRender={false}
           >
-            {renderVoteReport()}
+            {activeTab === 'vote' && renderVoteReport()}
           </TabPane>
           <TabPane
             tab={
@@ -603,8 +615,9 @@ const Reports: React.FC = () => {
               </span>
             }
             key="team"
+            forceRender={false}
           >
-            {renderTeamReport()}
+            {activeTab === 'team' && renderTeamReport()}
           </TabPane>
         </Tabs>
       </Spin>
