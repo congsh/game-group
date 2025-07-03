@@ -6,7 +6,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Card,
-  Typography,
   Button,
   Row,
   Col,
@@ -14,12 +13,15 @@ import {
   Empty,
   Spin,
   Alert,
-  message
+  message,
+  Select,
+  Modal
 } from 'antd';
 import {
   TeamOutlined,
   PlusOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  SortAscendingOutlined
 } from '@ant-design/icons';
 import { useTeamStore } from '../../store/teams';
 import { TeamDetails } from '../../types/team';
@@ -27,8 +29,10 @@ import { initWeekendTeamTable } from '../../utils/initData';
 import PageHeader from '../../components/common/PageHeader';
 import CreateTeamModal from '../../components/ui/CreateTeamModal';
 import TeamDetailsModal from '../../components/ui/TeamDetailsModal';
+import JoinTeamModal from '../../components/ui/JoinTeamModal';
 
-const { Title, Paragraph } = Typography;
+
+const { Option } = Select;
 
 /**
  * 周末组队页面组件
@@ -39,15 +43,19 @@ const WeekendTeams: React.FC = () => {
     loading,
     fetchTeams,
     joinTeam,
+    joinTeamWithTime,
     leaveTeam,
     joining,
     error,
-    clearError
+    clearError,
+    setFilters,
+    filters
   } = useTeamStore();
 
   // 模态框状态
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamDetails | null>(null);
 
   /**
@@ -66,14 +74,24 @@ const WeekendTeams: React.FC = () => {
   };
 
   /**
-   * 处理加入队伍
+   * 打开加入队伍模态框
    */
-  const handleJoinTeam = async (team: TeamDetails) => {
+  const handleOpenJoinModal = (team: TeamDetails) => {
+    setSelectedTeam(team);
+    setJoinModalVisible(true);
+  };
+
+  /**
+   * 处理加入队伍（带个性化时间）
+   */
+  const handleJoinTeamWithTime = async (joinForm: any) => {
     try {
-      await joinTeam(team.objectId);
+      await joinTeamWithTime(joinForm);
+      setJoinModalVisible(false);
+      setSelectedTeam(null);
       message.success('已成功加入队伍！');
     } catch (error) {
-      message.error('加入队伍失败，请重试');
+      throw error; // 让JoinTeamModal处理错误显示
     }
   };
 
@@ -81,12 +99,50 @@ const WeekendTeams: React.FC = () => {
    * 处理离开队伍
    */
   const handleLeaveTeam = async (team: TeamDetails) => {
-    try {
-      await leaveTeam(team.objectId);
-      message.success('已离开队伍');
-    } catch (error) {
-      message.error('离开队伍失败，请重试');
+    // 如果用户是队长，提示队伍将被删除
+    if (team.isCurrentUserLeader) {
+      Modal.confirm({
+        title: '确认离开队伍',
+        content: (
+          <div>
+            <p>⚠️ 您是队长，离开队伍后整个队伍将被删除。</p>
+            <p>所有队员都将被自动移除。</p>
+            <p>确定要继续吗？</p>
+          </div>
+        ),
+        okText: '确定删除',
+        cancelText: '取消',
+        okType: 'danger',
+        onOk: async () => {
+          try {
+            await leaveTeam(team.objectId);
+            message.success('队伍已删除');
+          } catch (error) {
+            message.error('操作失败，请重试');
+          }
+        }
+      });
+    } else {
+      // 普通成员离开
+      try {
+        await leaveTeam(team.objectId);
+        message.success('已离开队伍');
+      } catch (error) {
+        message.error('离开队伍失败，请重试');
+      }
     }
+  };
+
+  /**
+   * 处理排序变化
+   */
+  const handleSortChange = (value: string) => {
+    const [sortBy, sortOrder] = value.split(':');
+    setFilters({ 
+      ...filters, 
+      sortBy: sortBy as any, 
+      sortOrder: sortOrder as any 
+    });
   };
 
   /**
@@ -123,8 +179,8 @@ const WeekendTeams: React.FC = () => {
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
       <PageHeader
-        title="周末组队"
-        subtitle="创建或加入周末游戏组队，享受多人游戏的乐趣！"
+        title="游戏组队"
+        subtitle="创建或加入游戏组队，随时享受多人游戏的乐趣！"
         icon={<TeamOutlined />}
         extra={
           <Button 
@@ -139,11 +195,32 @@ const WeekendTeams: React.FC = () => {
       />
 
       <div style={{ marginBottom: 24 }}>
-        <Row justify="center" align="middle">
+        <Row justify="space-between" align="middle">
           <Col>
             <Space>
               <CalendarOutlined />
-              <span>本周末组队活动</span>
+              <span>游戏组队活动</span>
+            </Space>
+          </Col>
+          <Col>
+            <Space>
+              <SortAscendingOutlined />
+              <span>排序：</span>
+              <Select
+                style={{ width: 140 }}
+                placeholder="选择排序方式"
+                value={filters.sortBy ? `${filters.sortBy}:${filters.sortOrder || 'desc'}` : undefined}
+                onChange={handleSortChange}
+                allowClear
+              >
+                <Option value="createdAt:desc">🆕 最新创建</Option>
+                <Option value="memberCount:desc">👥 人数最多</Option>
+                <Option value="memberCount:asc">👤 人数最少</Option>
+                <Option value="startTime:asc">⏰ 时间最早</Option>
+                <Option value="startTime:desc">⏰ 时间最晚</Option>
+                <Option value="eventDate:asc">📅 日期最近</Option>
+                <Option value="eventDate:desc">📅 日期最远</Option>
+              </Select>
             </Space>
           </Col>
         </Row>
@@ -215,17 +292,19 @@ const WeekendTeams: React.FC = () => {
                       type="primary" 
                       key="join"
                       loading={joining}
-                      onClick={() => handleJoinTeam(team)}
+                      onClick={() => handleOpenJoinModal(team)}
                     >
-                      加入队伍
+                      设置时间并加入
                     </Button>
                   ) : team.isCurrentUserMember ? (
                     <Button 
                       key="leave" 
                       onClick={() => handleLeaveTeam(team)}
                       loading={joining}
+                      type={team.isCurrentUserLeader ? "default" : "default"}
+                      danger={team.isCurrentUserLeader}
                     >
-                      离开队伍
+                      {team.isCurrentUserLeader ? '解散队伍' : '离开队伍'}
                     </Button>
                   ) : (
                     <Button key="full" disabled>
@@ -271,6 +350,18 @@ const WeekendTeams: React.FC = () => {
           // 离开成功后刷新列表
           fetchTeams();
         }}
+      />
+
+      {/* 加入组队模态框 */}
+      <JoinTeamModal
+        visible={joinModalVisible}
+        team={selectedTeam}
+        onCancel={() => {
+          setJoinModalVisible(false);
+          setSelectedTeam(null);
+        }}
+        onJoin={handleJoinTeamWithTime}
+        loading={joining}
       />
     </div>
   );

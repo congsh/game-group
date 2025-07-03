@@ -4,8 +4,9 @@
  */
 
 import AV from 'leancloud-storage';
-import { DailyVote, VoteForm, VoteStats } from '../types/vote';
+import { DailyVote, VoteForm, VoteStats, GamePreference } from '../types/vote';
 import { initDailyVoteTable } from '../utils/initData';
+import { getCachedTodayVote, getBatchVoteStats, clearVotesCaches } from './dataCache';
 
 /**
  * 获取今日用户投票记录
@@ -14,14 +15,28 @@ import { initDailyVoteTable } from '../utils/initData';
  */
 export const getTodayVote = async (userId: string): Promise<DailyVote | null> => {
   try {
+    // 首先尝试从缓存获取
+    const cachedVote = await getCachedTodayVote(userId);
+    if (cachedVote) {
+      return cachedVote;
+    }
+    
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
     const query = new AV.Query('DailyVote');
-    query.equalTo('user', userId);
-    query.equalTo('date', today);
-    query.descending('createdAt');
+    // 优先按userId查询（新版本），如果没有则按user查询（兼容旧版本）
+    const orQuery1 = new AV.Query('DailyVote');
+    orQuery1.equalTo('userId', userId);
+    orQuery1.equalTo('date', today);
     
-    const result = await query.first();
+    const orQuery2 = new AV.Query('DailyVote');
+    orQuery2.equalTo('user', userId);
+    orQuery2.equalTo('date', today);
+    
+    const mainQuery = AV.Query.or(orQuery1, orQuery2);
+    mainQuery.descending('createdAt');
+    
+    const result = await mainQuery.first();
     
     if (!result) {
       return null;
@@ -31,8 +46,10 @@ export const getTodayVote = async (userId: string): Promise<DailyVote | null> =>
       objectId: result.id || '',
       date: result.get('date'),
       user: result.get('user'),
+      userId: result.get('userId'),
       wantsToPlay: result.get('wantsToPlay'),
       selectedGames: result.get('selectedGames') || [],
+      gamePreferences: result.get('gamePreferences') || [],
       createdAt: result.get('createdAt'),
       updatedAt: result.get('updatedAt'),
     };
@@ -66,33 +83,97 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
   try {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
+    // 获取当前用户信息，用于存储昵称
+    const currentUser = AV.User.current();
+    const userName = currentUser?.get('nickname') || currentUser?.get('username') || `用户${userId.slice(-4)}`;
+    
     // 先查看是否已有今日投票记录
     const existingVote = await getTodayVote(userId);
     
-    let vote: AV.Object;
+    let vote: AV.Object | null = null;
+    let isUpdating = false;
     
     if (existingVote) {
-      // 更新现有投票
-      vote = AV.Object.createWithoutData('DailyVote', existingVote.objectId);
-      vote.set('wantsToPlay', voteForm.wantsToPlay);
-      vote.set('selectedGames', voteForm.selectedGames);
-    } else {
-      // 创建新投票
-      vote = new AV.Object('DailyVote');
-      vote.set('date', today);
-      vote.set('user', userId);
-      vote.set('wantsToPlay', voteForm.wantsToPlay);
-      vote.set('selectedGames', voteForm.selectedGames);
+      // 尝试更新现有投票
+      try {
+        vote = AV.Object.createWithoutData('DailyVote', existingVote.objectId);
+        vote.set('wantsToPlay', voteForm.wantsToPlay);
+        vote.set('selectedGames', voteForm.selectedGames);
+        vote.set('gamePreferences', voteForm.gamePreferences || []);
+        // 更新用户昵称（以防用户改了昵称）
+        vote.set('user', userName);
+        vote.set('userId', userId);
+        isUpdating = true;
+      } catch (error) {
+        console.warn('创建更新对象失败，将创建新记录:', error);
+        vote = null;
+      }
     }
     
-    const result = await vote.save();
+    // 如果没有现有记录或者更新对象创建失败，创建新投票
+    if (!vote) {
+      vote = new AV.Object('DailyVote');
+      vote.set('date', today);
+      vote.set('user', userName);  // 存储用户昵称
+      vote.set('userId', userId);  // 存储用户ID用于查询
+      vote.set('wantsToPlay', voteForm.wantsToPlay);
+      vote.set('selectedGames', voteForm.selectedGames);
+      vote.set('gamePreferences', voteForm.gamePreferences || []);
+      isUpdating = false;
+    }
+    
+    let result: AV.Object;
+    
+    try {
+      result = await vote.save();
+      console.log('投票保存成功:', result.id);
+    } catch (saveError: any) {
+      console.error('保存投票时发生错误:', saveError);
+      
+      // 如果是404错误（记录不存在），清除缓存并创建新记录
+      if (saveError.code === 404) {
+        console.warn('投票记录不存在（404错误），清除缓存并创建新记录');
+        console.log('错误详情:', {
+          code: saveError.code,
+          message: saveError.message,
+          isUpdating,
+          voteId: isUpdating ? vote?.id : 'new'
+        });
+        
+        // 清除相关缓存
+        clearVotesCaches();
+        console.log('缓存已清除');
+        
+        // 无论什么情况，都创建新记录
+        vote = new AV.Object('DailyVote');
+        vote.set('date', today);
+        vote.set('user', userName);
+        vote.set('userId', userId);
+        vote.set('wantsToPlay', voteForm.wantsToPlay);
+        vote.set('selectedGames', voteForm.selectedGames);
+        vote.set('gamePreferences', voteForm.gamePreferences || []);
+        
+        console.log('正在创建新的投票记录...');
+        result = await vote.save();
+        console.log('新投票记录创建成功:', result.id);
+      } else {
+        // 其他错误，直接抛出
+        console.error('非404错误，直接抛出:', saveError);
+        throw saveError;
+      }
+    }
+    
+    // 清除相关缓存
+    clearVotesCaches();
     
     return {
       objectId: result.id || '',
       date: result.get('date'),
       user: result.get('user'),
+      userId: result.get('userId'),
       wantsToPlay: result.get('wantsToPlay'),
       selectedGames: result.get('selectedGames') || [],
+      gamePreferences: result.get('gamePreferences') || [],
       createdAt: result.get('createdAt'),
       updatedAt: result.get('updatedAt'),
     };
@@ -100,7 +181,7 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
     console.error('提交投票失败:', error);
     
     // 如果是404错误（表不存在），尝试初始化表
-    if (error.code === 404) {
+    if (error.code === 404 && error.message?.includes('doesn\'t exists')) {
       console.log('DailyVote表不存在，尝试自动创建...');
       try {
         await initDailyVoteTable();
@@ -117,6 +198,36 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
 };
 
 /**
+ * 计算游戏倾向度统计
+ * @param votes 投票记录列表
+ * @returns 游戏倾向度统计
+ */
+const calculateGameTendencies = (votes: AV.Object[]): Record<string, { averageTendency: number; tendencyCount: number }> => {
+  const tendencyStats: Record<string, { total: number; count: number }> = {};
+  
+  votes.forEach((vote: AV.Object) => {
+    const gamePreferences: GamePreference[] = vote.get('gamePreferences') || [];
+    gamePreferences.forEach(pref => {
+      if (!tendencyStats[pref.gameId]) {
+        tendencyStats[pref.gameId] = { total: 0, count: 0 };
+      }
+      tendencyStats[pref.gameId].total += pref.tendency;
+      tendencyStats[pref.gameId].count += 1;
+    });
+  });
+  
+  const result: Record<string, { averageTendency: number; tendencyCount: number }> = {};
+  Object.entries(tendencyStats).forEach(([gameId, stats]) => {
+    result[gameId] = {
+      averageTendency: stats.total / stats.count,
+      tendencyCount: stats.count,
+    };
+  });
+  
+  return result;
+};
+
+/**
  * 获取今日投票统计
  * @returns 今日投票统计数据
  */
@@ -124,7 +235,15 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
   try {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
-    // 获取今日所有投票
+    // 从缓存获取批量统计数据
+    const batchStats = await getBatchVoteStats(1);
+    
+    // 如果今日数据在批量数据中
+    if (batchStats[today]) {
+      return batchStats[today];
+    }
+    
+    // 如果不在批量数据中，使用旧方法获取
     const query = new AV.Query('DailyVote');
     query.equalTo('date', today);
     query.limit(1000); // 假设单日投票不会超过1000条
@@ -135,7 +254,7 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
     let wantToPlayCount = 0;
     const gameVoteCounts: Record<string, number> = {};
     
-    votes.forEach(vote => {
+    votes.forEach((vote) => {
       totalVotes++;
       
       if (vote.get('wantsToPlay')) {
@@ -148,6 +267,17 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
       });
     });
     
+    // 计算游戏倾向度统计
+    const gameTendencies = calculateGameTendencies(votes as any);
+    
+    // 生成投票用户列表
+    const voterList = votes.map((vote) => ({
+      userName: vote.get('user') || `用户${(vote.get('userId') || '').slice(-4)}`,
+      userId: vote.get('userId'),
+      wantsToPlay: vote.get('wantsToPlay') || false,
+      votedAt: vote.get('updatedAt') || vote.get('createdAt')
+    })).sort((a, b) => b.votedAt.getTime() - a.votedAt.getTime());
+    
     // 获取游戏名称，用于topGames
     const gameIds = Object.keys(gameVoteCounts);
     const gameQuery = new AV.Query('Game');
@@ -155,19 +285,20 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
     const games = await gameQuery.find();
     
     const gameNameMap: Record<string, string> = {};
-    games.forEach(game => {
+    games.forEach((game) => {
       const gameId = game.id;
       if (gameId) {
         gameNameMap[gameId] = game.get('name');
       }
     });
     
-    // 计算topGames（按投票数排序）
+    // 计算topGames（按投票数排序），包含平均倾向度
     const topGames = Object.entries(gameVoteCounts)
       .map(([gameId, voteCount]) => ({
         gameId,
         gameName: gameNameMap[gameId] || '未知游戏',
         voteCount,
+        averageTendency: gameTendencies[gameId]?.averageTendency,
       }))
       .sort((a, b) => b.voteCount - a.voteCount)
       .slice(0, 10); // 取前10名
@@ -178,6 +309,8 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
       wantToPlayCount,
       gameVoteCounts,
       topGames,
+      gameTendencies,
+      voterList,
     };
   } catch (error: any) {
     console.error('获取投票统计失败:', error);
@@ -196,6 +329,8 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
           wantToPlayCount: 0,
           gameVoteCounts: {},
           topGames: [],
+          gameTendencies: {},
+          voterList: [],
         };
       } catch (initError) {
         console.error('自动创建DailyVote表失败:', initError);
@@ -213,7 +348,13 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
  */
 export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
   try {
-    // 获取指定日期的所有投票
+    // 优先从批量缓存中获取
+    const batchStats = await getBatchVoteStats(7); // 获取最近7天的统计
+    if (batchStats[date]) {
+      return batchStats[date];
+    }
+    
+    // 如果缓存中没有，单独获取
     const query = new AV.Query('DailyVote');
     query.equalTo('date', date);
     query.limit(1000);
@@ -224,7 +365,7 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
     let wantToPlayCount = 0;
     const gameVoteCounts: Record<string, number> = {};
     
-    votes.forEach(vote => {
+    votes.forEach((vote) => {
       totalVotes++;
       
       if (vote.get('wantsToPlay')) {
@@ -237,6 +378,9 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
       });
     });
     
+    // 计算游戏倾向度统计
+    const gameTendencies = calculateGameTendencies(votes as any);
+    
     // 获取游戏名称
     const gameIds = Object.keys(gameVoteCounts);
     const gameQuery = new AV.Query('Game');
@@ -244,19 +388,20 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
     const games = await gameQuery.find();
     
     const gameNameMap: Record<string, string> = {};
-    games.forEach(game => {
+    games.forEach((game) => {
       const gameId = game.id;
       if (gameId) {
         gameNameMap[gameId] = game.get('name');
       }
     });
     
-    // 计算topGames
+    // 计算topGames，包含平均倾向度
     const topGames = Object.entries(gameVoteCounts)
       .map(([gameId, voteCount]) => ({
         gameId,
         gameName: gameNameMap[gameId] || '未知游戏',
         voteCount,
+        averageTendency: gameTendencies[gameId]?.averageTendency,
       }))
       .sort((a, b) => b.voteCount - a.voteCount)
       .slice(0, 10);
@@ -267,6 +412,7 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
       wantToPlayCount,
       gameVoteCounts,
       topGames,
+      gameTendencies,
     };
   } catch (error: any) {
     console.error('获取投票统计失败:', error);
@@ -280,6 +426,7 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
         wantToPlayCount: 0,
         gameVoteCounts: {},
         topGames: [],
+        gameTendencies: {},
       };
     }
     
@@ -294,19 +441,34 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
  */
 export const getRecentVoteStats = async (days: number = 7): Promise<VoteStats[]> => {
   try {
+    // 直接从批量缓存获取所有需要的日期的数据
+    const batchStats = await getBatchVoteStats(days);
+    
+    // 生成日期列表以确保按正确顺序返回数据
     const dates: string[] = [];
     const today = new Date();
-    
-    // 生成最近N天的日期列表
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       dates.push(date.toISOString().split('T')[0]);
     }
     
-    // 并行获取每天的统计数据
-    const statsPromises = dates.map(date => getVoteStatsByDate(date));
-    const stats = await Promise.all(statsPromises);
+    // 根据日期列表构建结果数组
+    const stats: VoteStats[] = dates.map(date => {
+      if (batchStats[date]) {
+        return batchStats[date];
+      } else {
+        // 如果没有此日期的数据，返回空统计
+        return {
+          date,
+          totalVotes: 0,
+          wantToPlayCount: 0,
+          gameVoteCounts: {},
+          topGames: [],
+          gameTendencies: {},
+        };
+      }
+    });
     
     return stats;
   } catch (error) {

@@ -2,7 +2,7 @@
  * 组队详情模态框组件
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   Card,
@@ -13,7 +13,8 @@ import {
   List,
   Typography,
   Divider,
-  message
+  message,
+  Alert
 } from 'antd';
 import {
   TeamOutlined,
@@ -22,11 +23,13 @@ import {
   UserOutlined,
   CrownOutlined,
   ExclamationCircleOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  ScheduleOutlined
 } from '@ant-design/icons';
-import { TeamDetails } from '../../types/team';
+import { TeamDetails, JoinTeamForm } from '../../types/team';
 import { useTeamStore } from '../../store/teams';
 import { useAuthStore } from '../../store/auth';
+import JoinTeamModal from './JoinTeamModal';
 
 const { Text } = Typography;
 const { confirm } = Modal;
@@ -49,21 +52,29 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
   onJoin,
   onLeave
 }) => {
-  const { joinTeam, leaveTeam, dissolveTeam, joining } = useTeamStore();
+  const { joinTeam, joinTeamWithTime, leaveTeam, dissolveTeam, joining } = useTeamStore();
   const { user } = useAuthStore();
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
 
   if (!team) return null;
 
   /**
-   * 处理加入队伍
+   * 打开加入队伍模态框
    */
-  const handleJoin = async () => {
+  const handleOpenJoinModal = () => {
+    setJoinModalVisible(true);
+  };
+
+  /**
+   * 处理加入队伍（带个性化时间）
+   */
+  const handleJoinWithTime = async (joinForm: JoinTeamForm) => {
     try {
-      await joinTeam(team.objectId);
-      message.success('已成功加入队伍！');
+      await joinTeamWithTime(joinForm);
+      setJoinModalVisible(false);
       onJoin?.();
     } catch (error) {
-      message.error('加入队伍失败，请重试');
+      throw error; // 让JoinTeamModal处理错误显示
     }
   };
 
@@ -71,20 +82,33 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
    * 处理离开队伍
    */
   const handleLeave = async () => {
+    // 如果用户是队长，提示队伍将被删除
+    const isLeader = team.isCurrentUserLeader;
+    
     confirm({
-      title: '确认离开队伍',
+      title: isLeader ? '确认解散队伍' : '确认离开队伍',
       icon: <ExclamationCircleOutlined />,
-      content: '确定要离开这个队伍吗？',
-      okText: '确认离开',
+      content: isLeader ? (
+        <div>
+          <p>⚠️ 您是队长，离开队伍后整个队伍将被删除。</p>
+          <p>所有队员都将被自动移除。</p>
+          <p>确定要继续吗？</p>
+        </div>
+      ) : '确定要离开这个队伍吗？',
+      okText: isLeader ? '确定删除' : '确认离开',
       okType: 'danger',
       cancelText: '取消',
       onOk: async () => {
         try {
           await leaveTeam(team.objectId);
-          message.success('已离开队伍');
-          onLeave?.();
+          message.success(isLeader ? '队伍已删除' : '已离开队伍');
+          if (isLeader) {
+            onCancel(); // 队伍删除后关闭模态框
+          } else {
+            onLeave?.();
+          }
         } catch (error) {
-          message.error('离开队伍失败，请重试');
+          message.error('操作失败，请重试');
         }
       }
     });
@@ -137,28 +161,17 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
 
     const buttons = [];
 
-    // 如果是队长，显示解散队伍按钮
-    if (team.isCurrentUserLeader) {
-      buttons.push(
-        <Button
-          key="dissolve"
-          danger
-          icon={<LogoutOutlined />}
-          onClick={handleDissolve}
-        >
-          解散队伍
-        </Button>
-      );
-    } else if (team.isCurrentUserMember) {
-      // 如果是队员，显示离开队伍按钮
+    // 如果是成员（包括队长），显示离开队伍按钮
+    if (team.isCurrentUserMember) {
       buttons.push(
         <Button
           key="leave"
           icon={<LogoutOutlined />}
           loading={joining}
           onClick={handleLeave}
+          danger={team.isCurrentUserLeader}
         >
-          离开队伍
+          {team.isCurrentUserLeader ? '解散队伍' : '离开队伍'}
         </Button>
       );
     } else if (team.status === 'open') {
@@ -167,11 +180,11 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
         <Button
           key="join"
           type="primary"
-          icon={<TeamOutlined />}
+          icon={<ScheduleOutlined />}
           loading={joining}
-          onClick={handleJoin}
+          onClick={handleOpenJoinModal}
         >
-          加入队伍
+          设置时间并加入
         </Button>
       );
     }
@@ -290,7 +303,55 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
             创建于 {new Date(team.createdAt).toLocaleString()}
           </Text>
         </div>
+
+        {/* 成员时间信息展示 */}
+        {team.memberTimeInfo && team.memberTimeInfo.length > 0 && (
+          <Card
+            size="small"
+            title={
+              <Space>
+                <ScheduleOutlined />
+                成员时间安排
+              </Space>
+            }
+            style={{ marginTop: 16 }}
+          >
+            <List
+              size="small"
+              dataSource={team.memberTimeInfo}
+              renderItem={(memberTime) => (
+                <List.Item key={memberTime.userId}>
+                  <List.Item.Meta
+                    title={
+                      <Space>
+                        {memberTime.username}
+                        {memberTime.userId === team.leader && (
+                          <Tag color="gold">队长</Tag>
+                        )}
+                      </Space>
+                    }
+                    description={
+                      <Space>
+                        <ClockCircleOutlined />
+                        {memberTime.startTime} - {memberTime.endTime}
+                      </Space>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </Card>
+        )}
       </div>
+
+      {/* 加入队伍模态框 */}
+      <JoinTeamModal
+        visible={joinModalVisible}
+        team={team}
+        onCancel={() => setJoinModalVisible(false)}
+        onJoin={handleJoinWithTime}
+        loading={joining}
+      />
     </Modal>
   );
 };

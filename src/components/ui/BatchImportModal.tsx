@@ -14,11 +14,8 @@ import {
   Alert,
   Input,
   Form,
-  Row,
-  Col,
   Space,
-  Divider,
-  Card
+  Divider
 } from 'antd';
 import {
   UploadOutlined,
@@ -47,12 +44,44 @@ interface BatchImportModalProps {
  * @returns 游戏数据数组
  */
 const parseCSV = (content: string): GameForm[] => {
-  const lines = content.trim().split('\n');
+  // 规范化换行符，处理不同操作系统的换行符差异
+  const normalizedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalizedContent.trim().split('\n');
+  
   if (lines.length < 2) {
     throw new Error('CSV文件格式不正确，至少需要标题行和数据行');
   }
 
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  // 更智能的CSV解析，支持带逗号的引用字段
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          // 处理双引号转义
+          current += '"';
+          i++; // 跳过下一个引号
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current.trim());
+    return result;
+  };
+
+  const headers = parseCSVLine(lines[0]).map(h => h.replace(/"/g, ''));
   const games: GameForm[] = [];
 
   // 验证必需的列
@@ -63,8 +92,14 @@ const parseCSV = (content: string): GameForm[] => {
   }
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    // 跳过空行
+    if (!lines[i].trim()) {
+      continue;
+    }
+    
+    const values = parseCSVLine(lines[i]).map(v => v.replace(/"/g, ''));
     if (values.length !== headers.length) {
+      console.warn(`第${i + 1}行字段数量不匹配，跳过该行: ${lines[i]}`);
       continue; // 跳过格式不正确的行
     }
 
@@ -182,7 +217,12 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const content = e.target?.result as string;
+        let content = e.target?.result as string;
+        
+        // 处理可能存在的BOM头，避免解析错误
+        if (content.charCodeAt(0) === 0xFEFF) {
+          content = content.slice(1);
+        }
         let games: GameForm[] = [];
 
         if (file.name.toLowerCase().endsWith('.csv')) {
@@ -206,7 +246,8 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
       }
     };
 
-    reader.readAsText(file);
+    // 指定UTF-8编码读取文件，解决中文乱码问题
+    reader.readAsText(file, 'UTF-8');
     return false; // 阻止自动上传
   };
 
@@ -404,6 +445,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
                      <div>
                        <p><strong>CSV格式:</strong> 需包含 name, minPlayers, maxPlayers 列</p>
                        <p><strong>JSON格式:</strong> 数组格式，每个对象包含 name, minPlayers, maxPlayers 字段</p>
+                       <p><strong>编码要求:</strong> 文件请保存为 UTF-8 编码，确保中文内容正常显示</p>
                        <p>
                          <strong>示例文件:</strong> 
                          <a href="/sample-games.csv" download style={{ marginLeft: 8, marginRight: 8 }}>

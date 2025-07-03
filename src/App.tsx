@@ -3,59 +3,25 @@
  */
 
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, message } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { initLeanCloud, checkLeanCloudConfig } from './services/leancloud';
 import { useAuthStore } from './store/auth';
+import { antdTheme } from './config/theme';
+import AppLayout from './components/layout/AppLayout';
 import { Login } from './pages/Login/Login';
+import Dashboard from './pages/Dashboard/Dashboard';
 import { Games } from './pages/Games/Games';
 import DailyVote from './pages/DailyVote/DailyVote';
 import WeekendTeams from './pages/WeekendTeams/WeekendTeams';
+import Reports from './pages/Reports/Reports';
 import { checkAndInitData } from './utils/initData';
 import './App.css';
 
-// 临时主页组件
-const Home: React.FC = () => {
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
-  
-  return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
-      <h1>欢迎来到游戏组队平台</h1>
-      {user && (
-        <div>
-          <p>欢迎，{user.username}！</p>
-          <div style={{ margin: '20px 0' }}>
-            <button 
-              style={{ margin: '0 10px', padding: '10px 20px' }}
-              onClick={() => navigate('/games')}
-            >
-              进入游戏库
-            </button>
-            <button 
-              style={{ margin: '0 10px', padding: '10px 20px' }}
-              onClick={() => navigate('/vote')}
-            >
-              每日投票
-            </button>
-            <button 
-              style={{ margin: '0 10px', padding: '10px 20px' }}
-              onClick={() => navigate('/teams')}
-            >
-              周末组队
-            </button>
-            <button 
-              style={{ margin: '0 10px', padding: '10px 20px' }}
-              onClick={logout}
-            >
-              退出登录
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+// 使用新的AppLayout包装内容的组件
+const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <AppLayout>{children}</AppLayout>;
 };
 
 // 受保护的路由组件
@@ -101,7 +67,7 @@ function App() {
   }, [user]);
 
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider locale={zhCN} theme={antdTheme}>
       <Router>
         <div className="App">
           <Routes>
@@ -110,7 +76,9 @@ function App() {
               path="/" 
               element={
                 <ProtectedRoute>
-                  <Home />
+                  <LayoutWrapper>
+                    <Dashboard />
+                  </LayoutWrapper>
                 </ProtectedRoute>
               } 
             />
@@ -118,7 +86,9 @@ function App() {
               path="/games" 
               element={
                 <ProtectedRoute>
-                  <Games />
+                  <LayoutWrapper>
+                    <Games />
+                  </LayoutWrapper>
                 </ProtectedRoute>
               } 
             />
@@ -126,7 +96,9 @@ function App() {
               path="/vote" 
               element={
                 <ProtectedRoute>
-                  <DailyVote />
+                  <LayoutWrapper>
+                    <DailyVote />
+                  </LayoutWrapper>
                 </ProtectedRoute>
               } 
             />
@@ -134,7 +106,19 @@ function App() {
               path="/teams" 
               element={
                 <ProtectedRoute>
-                  <WeekendTeams />
+                  <LayoutWrapper>
+                    <WeekendTeams />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <Reports />
+                  </LayoutWrapper>
                 </ProtectedRoute>
               } 
             />

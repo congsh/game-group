@@ -1,13 +1,642 @@
-body {
+/* 全局样式重置和基础样式 */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  padding: 0;
+  height: 100%;
+  background: #f5f5f5;
+  /* 阻止双击缩放 */
+  touch-action: manipulation;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5715;
+  color: rgba(0, 0, 0, 0.88);
+  /* 提升触摸体验 */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 允许文本选择的元素 */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  background: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.875em;
+}
+
+/* 应用根容器 */
+#root {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.App {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 移动端滚动条样式 */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* 选择文本样式 */
+::selection {
+  background: rgba(24, 144, 255, 0.2);
+  color: inherit;
+}
+
+::-moz-selection {
+  background: rgba(24, 144, 255, 0.2);
+  color: inherit;
+}
+
+/* 链接样式 */
+a {
+  color: #1890ff;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #40a9ff;
+}
+
+a:active {
+  color: #096dd9;
+}
+
+/* 输入框聚焦样式优化 */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input:focus-within {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* 移动端输入框优化 */
+@media (max-width: 768px) {
+  .ant-input {
+    min-height: 40px !important;
+    font-size: 16px !important; /* 防止iOS自动缩放 */
+  }
+  
+  .ant-input-lg {
+    min-height: 48px !important;
+    font-size: 18px !important;
+  }
+  
+  .ant-select-selector {
+    min-height: 40px !important;
+    font-size: 16px !important;
+  }
+  
+  .ant-select-single .ant-select-selector {
+    height: 40px !important;
+  }
+  
+  .ant-select-lg .ant-select-selector {
+    min-height: 48px !important;
+    font-size: 18px !important;
+  }
+}
+
+/* 按钮悬停效果增强 */
+.ant-btn:not(.ant-btn-link):not(.ant-btn-text) {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  /* 移动端触摸友好的最小尺寸 */
+  min-height: 36px;
+}
+
+.ant-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3) !important;
+}
+
+/* 移动端按钮优化 */
+@media (max-width: 768px) {
+  .ant-btn {
+    min-height: 44px !important; /* 触摸友好的尺寸 */
+    font-size: 16px !important;
+    border-radius: 8px !important;
+  }
+  
+  .ant-btn-sm {
+    min-height: 36px !important;
+    font-size: 14px !important;
+  }
+  
+  .ant-btn-lg {
+    min-height: 52px !important;
+    font-size: 18px !important;
+  }
+  
+  /* 按钮组在移动端的优化 */
+  .ant-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .ant-btn-group .ant-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* 卡片悬停效果 */
+.ant-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 移动端卡片优化 */
+@media (max-width: 768px) {
+  .ant-card {
+    border-radius: 12px !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .ant-card-body {
+    padding: 16px !important;
+  }
+  
+  .ant-card-head {
+    padding: 12px 16px !important;
+    min-height: auto !important;
+  }
+  
+  .ant-card-head-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+  }
+}
+
+/* 模态框样式优化 */
+.ant-modal {
+  padding-bottom: 0 !important;
+}
+
+.ant-modal-content {
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.ant-modal-header {
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding: 16px 24px !important;
+}
+
+.ant-modal-body {
+  padding: 24px !important;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid #f0f0f0 !important;
+  padding: 16px 24px !important;
+}
+
+/* 移动端模态框优化 */
+@media (max-width: 768px) {
+  .ant-modal {
+    max-width: calc(100vw - 32px) !important;
+    margin: 16px auto !important;
+  }
+  
+  .ant-modal-content {
+    border-radius: 16px !important;
+  }
+  
+  .ant-modal-header {
+    padding: 16px 20px !important;
+  }
+  
+  .ant-modal-body {
+    padding: 20px !important;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+  }
+  
+  .ant-modal-footer {
+    padding: 16px 20px !important;
+  }
+  
+  .ant-modal-footer .ant-btn {
+    flex: 1;
+    margin: 0 4px;
+  }
+}
+
+/* 消息提示样式优化 */
+.ant-message {
+  z-index: 9999 !important;
+}
+
+.ant-message-notice {
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 移动端消息提示优化 */
+@media (max-width: 768px) {
+  .ant-message {
+    margin-top: 16px !important;
+  }
+  
+  .ant-message-notice {
+    margin: 0 16px 8px !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+  }
+  
+  .ant-message-notice-content {
+    font-size: 15px !important;
+  }
+}
+
+/* 通知样式优化 */
+.ant-notification {
+  z-index: 9999 !important;
+}
+
+.ant-notification-notice {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* 移动端通知优化 */
+@media (max-width: 768px) {
+  .ant-notification {
+    margin: 0 16px !important;
+  }
+  
+  .ant-notification-notice {
+    border-radius: 12px !important;
+  }
+}
+
+/* 工具提示样式 */
+.ant-tooltip {
+  z-index: 9999 !important;
+}
+
+.ant-tooltip-inner {
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  padding: 6px 8px !important;
+}
+
+/* 移动端工具提示优化 */
+@media (max-width: 768px) {
+  .ant-tooltip-inner {
+    font-size: 14px !important;
+    padding: 8px 12px !important;
+  }
+}
+
+/* 表格样式优化 */
+.ant-table {
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th {
+  background: #fafafa !important;
+  font-weight: 600 !important;
+}
+
+/* 移动端表格优化 */
+@media (max-width: 768px) {
+  .ant-table {
+    font-size: 14px !important;
+  }
+  
+  .ant-table-thead > tr > th {
+    padding: 12px 8px !important;
+    font-size: 13px !important;
+  }
+  
+  .ant-table-tbody > tr > td {
+    padding: 12px 8px !important;
+    font-size: 14px !important;
+  }
+  
+  /* 表格横向滚动 */
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+}
+
+/* 分页样式优化 */
+.ant-pagination {
+  margin: 16px 0 !important;
+}
+
+.ant-pagination-item {
+  border-radius: 6px !important;
+}
+
+.ant-pagination-item-active {
+  border-color: #1890ff !important;
+}
+
+/* 移动端分页优化 */
+@media (max-width: 768px) {
+  .ant-pagination {
+    text-align: center !important;
+  }
+  
+  .ant-pagination-item,
+  .ant-pagination-prev,
+  .ant-pagination-next {
+    min-width: 44px !important;
+    height: 44px !important;
+    line-height: 42px !important;
+    margin: 0 4px !important;
+  }
+  
+  .ant-pagination-jump-prev,
+  .ant-pagination-jump-next {
+    min-width: 44px !important;
+    height: 44px !important;
+    line-height: 42px !important;
+  }
+}
+
+/* 标签样式优化 */
+.ant-tag {
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+  border: none !important;
+}
+
+/* 移动端标签优化 */
+@media (max-width: 768px) {
+  .ant-tag {
+    font-size: 13px !important;
+    padding: 4px 10px !important;
+    margin: 2px !important;
+  }
+}
+
+/* 进度条样式优化 */
+.ant-progress-line {
+  border-radius: 8px !important;
+}
+
+.ant-progress-bg {
+  border-radius: 8px !important;
+}
+
+/* 加载状态样式 */
+.ant-spin-container {
+  transition: opacity 0.3s ease !important;
+}
+
+/* 移动端特定的表单优化 */
+@media (max-width: 768px) {
+  .ant-form-item {
+    margin-bottom: 20px !important;
+  }
+  
+  .ant-form-item-label {
+    padding-bottom: 8px !important;
+  }
+  
+  .ant-form-item-label > label {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+  }
+  
+  /* 复选框和单选框优化 */
+  .ant-checkbox-wrapper,
+  .ant-radio-wrapper {
+    font-size: 15px !important;
+    padding: 8px 0 !important;
+  }
+  
+  .ant-checkbox,
+  .ant-radio {
+    transform: scale(1.2);
+  }
+  
+  /* 开关组件优化 */
+  .ant-switch {
+    min-width: 48px !important;
+    height: 24px !important;
+  }
+  
+  .ant-switch-handle {
+    width: 20px !important;
+    height: 20px !important;
+  }
+}
+
+/* 下拉菜单移动端优化 */
+@media (max-width: 768px) {
+  .ant-dropdown {
+    border-radius: 16px !important;
+  }
+  
+  .ant-dropdown-menu {
+    border-radius: 16px !important;
+    padding: 8px !important;
+  }
+  
+  .ant-dropdown-menu-item {
+    padding: 12px 16px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+    margin: 2px 0 !important;
+  }
+}
+
+/* 响应式工具类 */
+.mobile-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: block !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+/* 移动端间距工具类 */
+@media (max-width: 768px) {
+  .mobile-mb-16 {
+    margin-bottom: 16px !important;
+  }
+  
+  .mobile-mt-16 {
+    margin-top: 16px !important;
+  }
+  
+  .mobile-p-16 {
+    padding: 16px !important;
+  }
+  
+  .mobile-px-16 {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  .mobile-py-16 {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #000000;
+    color: rgba(255, 255, 255, 0.88);
+  }
+  
+  #root,
+  .App {
+    background: #000000;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #1f1f1f;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #434343;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #595959;
+  }
+}
+
+/* 动画工具类 */
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+.scale-in {
+  animation: scaleIn 0.3s ease;
+}
+
+/* 移动端优化的动画 */
+@media (max-width: 768px) {
+  .fade-in,
+  .slide-up,
+  .scale-in {
+    animation-duration: 0.2s; /* 移动端更快的动画 */
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 移动端特定的滑动动画 */
+@media (max-width: 768px) {
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
