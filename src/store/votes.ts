@@ -81,11 +81,12 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     set({ submitting: true, error: null });
 
     try {
-      const updatedVote = await submitTodayVote(user.objectId, voteForm);
-      set({ 
-        todayVote: updatedVote, 
-        submitting: false 
-      });
+      await submitTodayVote(user.objectId, voteForm);
+      
+      // 投票提交成功后，重新加载投票数据以确保获取最新状态
+      await get().loadTodayVote();
+      
+      set({ submitting: false });
       
       // 投票后刷新统计数据
       get().loadTodayStats();
@@ -95,6 +96,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
         error: error instanceof Error ? error.message : '提交投票失败',
         submitting: false 
       });
+      throw error; // 重新抛出错误以便组件处理
     }
   },
 

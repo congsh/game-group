@@ -3,7 +3,7 @@
  * 包含侧边栏导航、头部和内容区域
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Layout,
@@ -31,6 +31,8 @@ import {
   LogoutOutlined,
   BellOutlined,
   SearchOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/auth';
 import './AppLayout.css';
@@ -87,10 +89,34 @@ const breadcrumbMap: Record<string, string[]> = {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [floatButtonVisible, setFloatButtonVisible] = useState(true); // 悬浮按钮是否可见
+  const [isMobile, setIsMobile] = useState(false); // 是否为移动端
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // 移动端菜单是否打开
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = antdTheme.useToken();
+
+  // 检测屏幕尺寸
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkIsMobile);
+    };
+  }, []);
+
+  // 移动端路由变化时关闭菜单
+  useEffect(() => {
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  }, [location.pathname, isMobile]);
 
   // 获取当前选中的菜单项
   const selectedKeys = [location.pathname];
@@ -132,22 +158,46 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     navigate(key);
   };
 
+  // 处理折叠按钮点击
+  const handleCollapseClick = () => {
+    if (isMobile) {
+      setMobileMenuOpen(!mobileMenuOpen);
+    } else {
+      setCollapsed(!collapsed);
+    }
+  };
+
+  // 处理遮罩层点击
+  const handleMaskClick = () => {
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  };
+
   return (
     <Layout className="app-layout">
+      {/* 移动端遮罩层 */}
+      {isMobile && (
+        <div 
+          className={`mobile-sider-mask ${mobileMenuOpen ? 'visible' : ''}`}
+          onClick={handleMaskClick}
+        />
+      )}
+
       {/* 侧边栏 */}
       <Sider 
         trigger={null} 
         collapsible 
-        collapsed={collapsed}
-        className="app-sider"
+        collapsed={!isMobile && collapsed}
+        className={`app-sider ${isMobile && mobileMenuOpen ? 'mobile-open' : ''}`}
         theme="light"
         width={240}
-        collapsedWidth={64}
+        collapsedWidth={isMobile ? 240 : 64}
       >
         {/* Logo 区域 */}
         <div className="app-logo">
           <div className="logo-icon">🎮</div>
-          {!collapsed && (
+          {(!collapsed || isMobile) && (
             <div className="logo-text">
               <Title level={4} className="logo-title">游戏组队</Title>
               <Text type="secondary" className="logo-subtitle">GameGroup</Text>
@@ -165,7 +215,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         />
 
         {/* 侧边栏底部用户信息 */}
-        {!collapsed && (
+        {(!collapsed || isMobile) && (
           <div className="sider-user-info">
             <Space>
               <Avatar 
@@ -189,19 +239,25 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="header-left">
             <Button
               type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
+              icon={
+                isMobile 
+                  ? (mobileMenuOpen ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />)
+                  : (collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />)
+              }
+              onClick={handleCollapseClick}
               className="collapse-btn"
             />
             
             <div className="page-info">
               <Title level={4} className="page-title">{pageTitle}</Title>
-              <Breadcrumb items={breadcrumbItems} className="page-breadcrumb" />
+              {!isMobile && (
+                <Breadcrumb items={breadcrumbItems} className="page-breadcrumb" />
+              )}
             </div>
           </div>
 
           <div className="header-right">
-            <Space size="middle">
+            <Space size={isMobile ? "small" : "middle"}>
               {/* 搜索按钮 */}
               <Tooltip title="搜索">
                 <Button 
@@ -222,6 +278,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 </Badge>
               </Tooltip>
 
+              {/* 控制悬浮按钮显示/隐藏 - 桌面端显示 */}
+              {!isMobile && (
+                <Tooltip title={floatButtonVisible ? "隐藏悬浮按钮" : "显示悬浮按钮"}>
+                  <Button 
+                    type="text" 
+                    icon={floatButtonVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                    onClick={() => setFloatButtonVisible(!floatButtonVisible)}
+                    className="header-btn"
+                  />
+                </Tooltip>
+              )}
+
               {/* 用户头像下拉菜单 */}
               <Dropdown 
                 menu={{ items: userMenuItems }} 
@@ -233,10 +301,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     icon={<UserOutlined />}
                     style={{ backgroundColor: token.colorPrimary }}
                   />
-                  <div className="user-info">
-                    <Text strong>{user?.username}</Text>
-                    <Text type="secondary" className="user-role">管理员</Text>
-                  </div>
+                  {!isMobile && (
+                    <div className="user-info">
+                      <Text strong>{user?.username}</Text>
+                      <Text type="secondary" className="user-role">管理员</Text>
+                    </div>
+                  )}
                 </Space>
               </Dropdown>
             </Space>
@@ -250,6 +320,25 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
         </Content>
       </Layout>
+
+      {/* 悬浮导航栏控制按钮 - 仅桌面端显示 */}
+      {!isMobile && floatButtonVisible && (
+        <div className="float-nav-button">
+          <Tooltip 
+            title={collapsed ? "展开导航栏" : "收起导航栏"} 
+            placement="left"
+          >
+            <Button
+              type="primary"
+              shape="circle"
+              size="large"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              className="float-nav-btn"
+            />
+          </Tooltip>
+        </div>
+      )}
     </Layout>
   );
 };

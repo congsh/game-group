@@ -107,19 +107,61 @@ const DailyVote: React.FC = () => {
    */
   const handleSubmit = async (values: VoteForm) => {
     try {
-      // 确保包含倾向度数据
+      // 🔍 调试信息：显示即将提交的数据
+      console.log('=== 投票提交调试信息 ===');
+      console.log('表单数据 (values):', values);
+      console.log('本地状态 - wantsToPlay:', wantsToPlay);
+      console.log('本地状态 - selectedGames:', selectedGames);
+      console.log('本地状态 - gamePreferences:', gamePreferences);
+      
+      // ✅ 使用当前本地状态构建提交数据，确保数据一致性
       const submitData: VoteForm = {
-        ...values,
-        gamePreferences: gamePreferences
+        wantsToPlay: wantsToPlay, // 使用本地状态
+        selectedGames: selectedGames, // 使用本地状态
+        gamePreferences: gamePreferences // 使用本地状态
       };
+      
+      console.log('实际提交的数据 (submitData):', submitData);
+      
+      // 🔍 数据验证：检查数据一致性
+      if (wantsToPlay && selectedGames.length === 0) {
+        console.warn('⚠️ 数据不一致：想玩游戏但没有选择游戏');
+        message.error('请选择至少一个游戏');
+        return;
+      }
+      
+      if (wantsToPlay && selectedGames.length !== gamePreferences.length) {
+        console.warn('⚠️ 数据不一致：选中游戏数量与倾向度数量不匹配');
+        console.log('selectedGames.length:', selectedGames.length);
+        console.log('gamePreferences.length:', gamePreferences.length);
+        
+        // 自动修复倾向度数据
+        const fixedPreferences = selectedGames.map(gameId => {
+          const existing = gamePreferences.find(pref => pref.gameId === gameId);
+          return existing || { gameId, tendency: 3 };
+        });
+        
+        console.log('修复后的倾向度数据:', fixedPreferences);
+        setGamePreferences(fixedPreferences);
+        
+        submitData.gamePreferences = fixedPreferences;
+      }
+      
+      console.log('最终提交数据:', submitData);
+      console.log('=== 开始提交投票 ===');
+      
       await submitVote(submitData);
+      
+      console.log('✅ 投票提交成功');
       message.success(hasVoted ? '投票已更新！' : '投票已提交！');
+      
     } catch (error: any) {
-      console.error('投票提交失败:', error);
+      console.error('❌ 投票提交失败:', error);
       console.log('错误详情:', {
         code: error.code,
         message: error.message,
-        name: error.name
+        name: error.name,
+        stack: error.stack
       });
       
       // 如果是404错误，提示用户清除缓存
@@ -214,16 +256,54 @@ const DailyVote: React.FC = () => {
     }
   };
 
+
+
+  /**
+   * 重置表单到初始状态
+   */
+  const handleResetForm = () => {
+    console.log('🔄 重置表单到初始状态');
+    
+    // 重置本地状态
+    setWantsToPlay(false);
+    setSelectedGames([]);
+    setGamePreferences([]);
+    setGameSearchText('');
+    
+    // 重置表单
+    form.resetFields();
+    
+    // 确保表单字段同步
+    form.setFieldsValue({
+      wantsToPlay: false,
+      selectedGames: [],
+      gamePreferences: []
+    });
+    
+    console.log('✅ 表单重置完成');
+    message.success('✅ 表单已重置到初始状态');
+  };
+
   /**
    * 处理想要玩游戏状态变化
    */
   const handleWantsToPlayChange = (checked: boolean) => {
+    console.log('🎮 想要玩游戏状态变化:', checked);
+    
     setWantsToPlay(checked);
+    
+    // 同步更新表单字段
+    form.setFieldValue('wantsToPlay', checked);
+    
     if (!checked) {
+      console.log('🚫 不想玩游戏，清除游戏选择和倾向度');
       setSelectedGames([]);
       setGamePreferences([]);
       setGameSearchText(''); // 清除搜索文本
+      
+      // 同步更新表单字段
       form.setFieldValue('selectedGames', []);
+      form.setFieldValue('gamePreferences', []);
     }
   };
 
@@ -231,7 +311,12 @@ const DailyVote: React.FC = () => {
    * 处理游戏选择变化
    */
   const handleGameSelectionChange = (gameIds: string[]) => {
+    console.log('🎯 游戏选择变化:', gameIds);
+    
     setSelectedGames(gameIds);
+    
+    // 同步更新表单字段
+    form.setFieldValue('selectedGames', gameIds);
     
     // 更新倾向度数据，移除未选中的游戏，添加新选中的游戏
     const newPreferences = gamePreferences.filter((pref: GamePreference) => 
@@ -248,17 +333,28 @@ const DailyVote: React.FC = () => {
       }
     });
     
+    console.log('📊 更新后的倾向度数据:', newPreferences);
     setGamePreferences(newPreferences);
+    
+    // 同步更新表单字段
+    form.setFieldValue('gamePreferences', newPreferences);
   };
 
   /**
    * 处理游戏倾向度变化
    */
   const handleTendencyChange = (gameId: string, tendency: number) => {
+    console.log(`⭐ 游戏 ${gameId} 倾向度变化:`, tendency);
+    
     const newPreferences = gamePreferences.map((pref: GamePreference) =>
       pref.gameId === gameId ? { ...pref, tendency } : pref
     );
+    
+    console.log('📊 更新后的倾向度数据:', newPreferences);
     setGamePreferences(newPreferences);
+    
+    // 同步更新表单字段
+    form.setFieldValue('gamePreferences', newPreferences);
   };
 
   /**
@@ -375,23 +471,33 @@ const DailyVote: React.FC = () => {
       />
 
       {/* 调试工具栏 */}
-      <Card size="small" style={{ marginBottom: 16, backgroundColor: '#fafafa' }}>
+      <Card size="small" style={{ marginBottom: 16, backgroundColor: '#fafafa' }} className="debug-toolbar">
         <Row justify="space-between" align="middle">
-          <Col>
+                    <Col>
             <Text type="secondary" style={{ fontSize: '12px' }}>
-              💡 如果遇到投票问题，可以尝试清除缓存
+              🔧 调试工具：重置表单、清除缓存、刷新数据
             </Text>
           </Col>
           <Col>
             <Space size="small">
               <Button 
                 size="small" 
+                onClick={handleResetForm}
+                type="default"
+                style={{ fontSize: '12px' }}
+                title="重置表单到初始状态"
+              >
+                🔄 重置表单
+              </Button>
+              <Button 
+                size="small" 
                 icon={<ReloadOutlined />}
                 onClick={handleClearVoteCache}
                 type="default"
                 style={{ fontSize: '12px' }}
+                title="清除投票缓存并重新加载数据"
               >
-                清除缓存
+                🗑️ 清除缓存
               </Button>
               <Button 
                 size="small" 
@@ -401,8 +507,9 @@ const DailyVote: React.FC = () => {
                   message.success('数据已刷新');
                 }}
                 style={{ fontSize: '12px' }}
+                title="重新从服务器加载投票数据"
               >
-                刷新数据
+                🔃 刷新数据
               </Button>
             </Space>
           </Col>

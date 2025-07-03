@@ -284,6 +284,79 @@
   min-height: calc(100vh - 64px);
 }
 
+/* 悬浮导航栏控制按钮 */
+.float-nav-button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  animation: floatButtonFadeIn 0.3s ease;
+}
+
+.float-nav-btn {
+  width: 56px !important;
+  height: 56px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
+  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.float-nav-btn:hover {
+  transform: scale(1.1) translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(24, 144, 255, 0.4) !important;
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+}
+
+.float-nav-btn:active {
+  transform: scale(1.05) translateY(0) !important;
+}
+
+.float-nav-btn .anticon {
+  font-size: 18px !important;
+  color: #ffffff !important;
+}
+
+/* 悬浮按钮动画 */
+@keyframes floatButtonFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 移动端遮罩层 */
+.mobile-sider-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+  display: none;
+  animation: maskFadeIn 0.3s ease;
+}
+
+.mobile-sider-mask.visible {
+  display: block;
+}
+
+@keyframes maskFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .app-sider {
@@ -292,6 +365,12 @@
     top: 0;
     height: 100vh;
     z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .app-sider.mobile-open {
+    transform: translateX(0);
   }
   
   .app-main {
@@ -303,7 +382,7 @@
   }
   
   .header-left {
-    gap: 16px;
+    gap: 12px;
   }
   
   .page-title {
@@ -321,15 +400,77 @@
   .page-breadcrumb {
     display: none;
   }
+  
+  .float-nav-button {
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  .float-nav-btn {
+    width: 52px !important;
+    height: 52px !important;
+  }
+  
+  .float-nav-btn .anticon {
+    font-size: 16px !important;
+  }
+  
+  /* 触摸友好的按钮大小 */
+  .header-btn {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  
+  .collapse-btn {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  
+  /* 导航菜单在移动端的优化 */
+  .app-menu .ant-menu-item {
+    height: 48px !important;
+    line-height: 48px !important;
+    margin: 6px 0 !important;
+    font-size: 16px !important;
+  }
+  
+  .app-menu .ant-menu-item-icon {
+    font-size: 18px !important;
+  }
+  
+  /* Logo区域在移动端的优化 */
+  .app-logo {
+    padding: 20px 16px;
+  }
+  
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+  
+  .logo-title {
+    font-size: 16px !important;
+  }
+  
+  /* 用户信息在移动端的优化 */
+  .sider-user-info {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    padding: 16px;
+  }
 }
 
 @media (max-width: 576px) {
   .app-header {
     padding: 0 12px !important;
+    height: 56px !important;
+    line-height: 56px !important;
   }
   
   .header-left {
-    gap: 12px;
+    gap: 8px;
   }
   
   .page-title {
@@ -341,8 +482,36 @@
   }
   
   .header-btn {
-    width: 36px !important;
-    height: 36px !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .collapse-btn {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .float-nav-button {
+    bottom: 16px;
+    right: 16px;
+  }
+  
+  .float-nav-btn {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  
+  .float-nav-btn .anticon {
+    font-size: 14px !important;
+  }
+  
+  /* 非常小的屏幕优化 */
+  .app-content {
+    min-height: calc(100vh - 56px);
+  }
+  
+  .content-wrapper {
+    min-height: calc(100vh - 56px);
   }
 }
 
@@ -393,6 +562,10 @@
   .sider-user-info {
     background: #1f1f1f;
     border-color: #303030;
+  }
+  
+  .mobile-sider-mask {
+    background: rgba(0, 0, 0, 0.7);
   }
 }
 

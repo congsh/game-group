@@ -131,4 +131,441 @@
 .ranking-item-right {
   color: #666;
   font-size: 12px;
+}
+
+/* 游戏倾向度评分样式 */
+.game-tendency-section {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.tendency-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.tendency-item:last-child {
+  margin-bottom: 0;
+}
+
+.game-name-tendency {
+  font-weight: 500;
+  color: #262626;
+  flex: 1;
+  margin-right: 16px;
+}
+
+.tendency-rating {
+  min-width: 120px;
+  text-align: right;
+}
+
+/* 投票结果排序选择器 */
+.vote-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sort-selector {
+  min-width: 120px;
+}
+
+/* 调试工具栏样式 */
+.debug-toolbar {
+  background: #fafafa;
+  border: 1px solid #e6f7ff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.debug-toolbar .ant-typography {
+  margin: 0;
+}
+
+/* 游戏搜索框样式 */
+.game-search-input {
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.game-search-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.game-search-input .ant-input {
+  border: none;
+  box-shadow: none;
+}
+
+/* 空状态样式 */
+.game-search-empty {
+  text-align: center;
+  color: #999;
+  padding: 24px 16px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+  background: #fafafa;
+  margin-top: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .daily-vote-container {
+    padding: 16px;
+  }
+  
+  .daily-vote-header {
+    margin-bottom: 20px;
+  }
+  
+  .vote-form-card,
+  .vote-stats-card {
+    margin-bottom: 16px;
+  }
+  
+  .vote-form-card .ant-card-body {
+    padding: 16px;
+  }
+  
+  /* 移动端表单优化 */
+  .ant-form-item {
+    margin-bottom: 24px;
+  }
+  
+  .ant-form-item-label {
+    padding-bottom: 8px;
+  }
+  
+  .ant-form-item-label > label {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  /* 开关组件移动端优化 */
+  .ant-switch {
+    transform: scale(1.2);
+  }
+  
+  /* 游戏选择器移动端优化 */
+  .game-selector .ant-select-selector {
+    min-height: 60px;
+    padding: 8px 12px;
+  }
+  
+  .game-selector .ant-select-selection-overflow {
+    max-height: 100px;
+  }
+  
+  .game-selector .ant-select-selection-item {
+    margin: 2px 4px 2px 0;
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+  
+  /* 游戏搜索框移动端优化 */
+  .game-search-input {
+    margin-bottom: 12px;
+  }
+  
+  .game-search-input .ant-input {
+    font-size: 16px;
+    padding: 12px 16px;
+  }
+  
+  /* 游戏倾向度评分移动端优化 */
+  .game-tendency-section {
+    padding: 12px;
+    margin-top: 20px;
+  }
+  
+  .tendency-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .game-name-tendency {
+    margin-right: 0;
+    font-size: 15px;
+  }
+  
+  .tendency-rating {
+    width: 100%;
+    text-align: left;
+  }
+  
+  .tendency-rating .ant-rate {
+    font-size: 24px;
+  }
+  
+  /* 排行榜移动端优化 */
+  .ranking-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 0;
+    gap: 8px;
+  }
+  
+  .ranking-item-left {
+    width: 100%;
+  }
+  
+  .ranking-item-right {
+    align-self: flex-end;
+    font-size: 13px;
+  }
+  
+  /* 投票结果排序移动端优化 */
+  .vote-result-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .sort-selector {
+    min-width: auto;
+  }
+  
+  .sort-selector .ant-select {
+    width: 100%;
+  }
+  
+  /* 统计卡片移动端优化 */
+  .vote-stats-card .ant-statistic-content {
+    font-size: 20px;
+  }
+  
+  /* 调试工具栏移动端优化 */
+  .debug-toolbar {
+    padding: 12px;
+  }
+  
+  .debug-toolbar .ant-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .debug-toolbar .ant-col:last-child {
+    text-align: left;
+  }
+  
+  .debug-toolbar .ant-space {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .debug-toolbar .ant-btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 576px) {
+  .daily-vote-container {
+    padding: 12px;
+  }
+  
+  .daily-vote-header {
+    margin-bottom: 16px;
+  }
+  
+  .vote-form-card .ant-card-body {
+    padding: 12px;
+  }
+  
+  /* 超小屏幕表单优化 */
+  .ant-form-item {
+    margin-bottom: 20px;
+  }
+  
+  .ant-form-item-label > label {
+    font-size: 15px;
+  }
+  
+  /* 游戏选择器超小屏幕优化 */
+  .game-selector .ant-select-selector {
+    min-height: 50px;
+    padding: 6px 10px;
+  }
+  
+  .game-selector .ant-select-selection-item {
+    font-size: 13px;
+    padding: 2px 6px;
+  }
+  
+  /* 游戏倾向度评分超小屏幕优化 */
+  .tendency-item {
+    padding: 10px;
+  }
+  
+  .game-name-tendency {
+    font-size: 14px;
+  }
+  
+  .tendency-rating .ant-rate {
+    font-size: 20px;
+  }
+  
+  /* 统计数据超小屏幕优化 */
+  .vote-stats-card .ant-statistic-content {
+    font-size: 18px;
+  }
+  
+  .vote-stats-card .ant-statistic-title {
+    font-size: 13px;
+  }
+  
+  /* 排行榜超小屏幕优化 */
+  .ranking-item {
+    padding: 10px 0;
+  }
+  
+  .ranking-item-left {
+    font-size: 14px;
+  }
+  
+  .ranking-item-right {
+    font-size: 12px;
+  }
+  
+  /* 搜索框超小屏幕优化 */
+  .game-search-input .ant-input {
+    padding: 10px 12px;
+  }
+  
+  .game-search-empty {
+    padding: 20px 12px;
+    font-size: 13px;
+  }
+}
+
+/* 触摸设备特定优化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 触摸设备上的按钮优化 */
+  .ant-btn {
+    min-height: 44px;
+  }
+  
+  .ant-btn-sm {
+    min-height: 36px;
+  }
+  
+  /* 触摸设备上的开关优化 */
+  .ant-switch {
+    min-width: 48px;
+    height: 24px;
+  }
+  
+  /* 触摸设备上的评分组件优化 */
+  .ant-rate .ant-rate-star {
+    margin-right: 6px;
+  }
+  
+  .tendency-rating .ant-rate .ant-rate-star {
+    margin-right: 8px;
+  }
+  
+  /* 触摸设备上的选择器优化 */
+  .ant-select-dropdown .ant-select-item {
+    padding: 12px 16px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* 横屏手机优化 */
+@media (max-height: 500px) and (orientation: landscape) {
+  .daily-vote-container {
+    padding: 8px 16px;
+  }
+  
+  .daily-vote-header {
+    margin-bottom: 12px;
+  }
+  
+  .vote-form-card .ant-card-body {
+    padding: 12px;
+  }
+  
+  .ant-form-item {
+    margin-bottom: 16px;
+  }
+  
+  .game-tendency-section {
+    margin-top: 12px;
+    padding: 8px;
+  }
+  
+  .tendency-item {
+    padding: 8px;
+    gap: 8px;
+  }
+}
+
+/* 动画优化 */
+.daily-vote-container .ant-card {
+  animation: slideUp 0.4s ease-out;
+}
+
+.tendency-item {
+  transition: all 0.3s ease;
+}
+
+.tendency-item:hover {
+  background: #f8f9fa;
+  border-color: #e6f7ff;
+}
+
+/* 移动端禁用hover效果 */
+@media (max-width: 768px) {
+  .tendency-item:hover {
+    background: white;
+    border-color: #f0f0f0;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .game-tendency-section {
+    background: #1f1f1f;
+  }
+  
+  .tendency-item {
+    background: #141414;
+    border-color: #303030;
+  }
+  
+  .game-name-tendency {
+    color: rgba(255, 255, 255, 0.88);
+  }
+  
+  .debug-toolbar {
+    background: #1f1f1f;
+    border-color: #303030;
+  }
+  
+  .game-search-empty {
+    background: #1f1f1f;
+    border-color: #303030;
+    color: rgba(255, 255, 255, 0.45);
+  }
+  
+  .tendency-item:hover {
+    background: #262626;
+    border-color: #434343;
+  }
 } 
