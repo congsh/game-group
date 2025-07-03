@@ -6,7 +6,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Card,
-  Typography,
   Button,
   Row,
   Col,
@@ -14,12 +13,14 @@ import {
   Empty,
   Spin,
   Alert,
-  message
+  message,
+  Select
 } from 'antd';
 import {
   TeamOutlined,
   PlusOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  SortAscendingOutlined
 } from '@ant-design/icons';
 import { useTeamStore } from '../../store/teams';
 import { TeamDetails } from '../../types/team';
@@ -28,7 +29,8 @@ import PageHeader from '../../components/common/PageHeader';
 import CreateTeamModal from '../../components/ui/CreateTeamModal';
 import TeamDetailsModal from '../../components/ui/TeamDetailsModal';
 
-const { Title, Paragraph } = Typography;
+
+const { Option } = Select;
 
 /**
  * 周末组队页面组件
@@ -42,7 +44,9 @@ const WeekendTeams: React.FC = () => {
     leaveTeam,
     joining,
     error,
-    clearError
+    clearError,
+    setFilters,
+    filters
   } = useTeamStore();
 
   // 模态框状态
@@ -87,6 +91,18 @@ const WeekendTeams: React.FC = () => {
     } catch (error) {
       message.error('离开队伍失败，请重试');
     }
+  };
+
+  /**
+   * 处理排序变化
+   */
+  const handleSortChange = (value: string) => {
+    const [sortBy, sortOrder] = value.split(':');
+    setFilters({ 
+      ...filters, 
+      sortBy: sortBy as any, 
+      sortOrder: sortOrder as any 
+    });
   };
 
   /**
@@ -139,11 +155,32 @@ const WeekendTeams: React.FC = () => {
       />
 
       <div style={{ marginBottom: 24 }}>
-        <Row justify="center" align="middle">
+        <Row justify="space-between" align="middle">
           <Col>
             <Space>
               <CalendarOutlined />
               <span>本周末组队活动</span>
+            </Space>
+          </Col>
+          <Col>
+            <Space>
+              <SortAscendingOutlined />
+              <span>排序：</span>
+              <Select
+                style={{ width: 140 }}
+                placeholder="选择排序方式"
+                value={filters.sortBy ? `${filters.sortBy}:${filters.sortOrder || 'desc'}` : undefined}
+                onChange={handleSortChange}
+                allowClear
+              >
+                <Option value="createdAt:desc">🆕 最新创建</Option>
+                <Option value="memberCount:desc">👥 人数最多</Option>
+                <Option value="memberCount:asc">👤 人数最少</Option>
+                <Option value="startTime:asc">⏰ 时间最早</Option>
+                <Option value="startTime:desc">⏰ 时间最晚</Option>
+                <Option value="eventDate:asc">📅 日期最近</Option>
+                <Option value="eventDate:desc">📅 日期最远</Option>
+              </Select>
             </Space>
           </Col>
         </Row>

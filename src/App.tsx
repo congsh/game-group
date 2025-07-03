@@ -12,6 +12,7 @@ import { Login } from './pages/Login/Login';
 import { Games } from './pages/Games/Games';
 import DailyVote from './pages/DailyVote/DailyVote';
 import WeekendTeams from './pages/WeekendTeams/WeekendTeams';
+import Reports from './pages/Reports/Reports';
 import { checkAndInitData } from './utils/initData';
 import './App.css';
 
@@ -44,6 +45,12 @@ const Home: React.FC = () => {
               onClick={() => navigate('/teams')}
             >
               周末组队
+            </button>
+            <button 
+              style={{ margin: '0 10px', padding: '10px 20px' }}
+              onClick={() => navigate('/reports')}
+            >
+              数据报表
             </button>
             <button 
               style={{ margin: '0 10px', padding: '10px 20px' }}
@@ -135,6 +142,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <WeekendTeams />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute>
+                  <Reports />
                 </ProtectedRoute>
               } 
             />

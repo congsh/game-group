@@ -39,14 +39,14 @@ import {
 import { useGameStore } from '../../store/games';
 import { useAuthStore } from '../../store/auth';
 import type { Game, GameForm as GameFormType } from '../../types/game';
-import { checkAndInitData } from '../../utils/initData';
+
 import { BatchImportModal } from '../../components/ui/BatchImportModal';
 import PageHeader from '../../components/common/PageHeader';
 import './Games.css';
 
 const { Search } = Input;
 const { Option } = Select;
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Meta } = Card;
 
 /**
@@ -521,12 +521,15 @@ export const Games: React.FC = () => {
               onChange={handleSortChange}
               allowClear
             >
-              <Option value="createdAt:desc">最新添加</Option>
+              <Option value="hotScore:desc">🔥 综合热度</Option>
+              <Option value="favoriteCount:desc">❤️ 最多收藏</Option>
+              <Option value="likeCount:desc">👍 最多点赞</Option>
+              <Option value="createdAt:desc">🆕 最新添加</Option>
+              <Option value="name:asc">🔤 名称 A-Z</Option>
+              <Option value="name:desc">🔤 名称 Z-A</Option>
+              <Option value="favoriteCount:asc">收藏最少</Option>
+              <Option value="likeCount:asc">点赞最少</Option>
               <Option value="createdAt:asc">最早添加</Option>
-              <Option value="name:asc">名称 A-Z</Option>
-              <Option value="name:desc">名称 Z-A</Option>
-              <Option value="likeCount:desc">最多点赞</Option>
-              <Option value="likeCount:asc">最少点赞</Option>
             </Select>
           </Col>
           <Col xs={12} sm={6} md={4}>

@@ -14,11 +14,8 @@ import {
   Alert,
   Input,
   Form,
-  Row,
-  Col,
   Space,
-  Divider,
-  Card
+  Divider
 } from 'antd';
 import {
   UploadOutlined,

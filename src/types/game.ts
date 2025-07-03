@@ -11,6 +11,8 @@ export interface Game {
   description?: string;       // 游戏描述
   type?: string;             // 游戏类型
   likeCount: number;         // 点赞数
+  favoriteCount?: number;    // 收藏数（新增）
+  hotScore?: number;         // 综合热度分数（新增）
   createdBy: string;         // 创建者用户ID
   createdAt: Date;
   updatedAt: Date;
@@ -29,7 +31,7 @@ export interface GameFilters {
   search?: string;
   platform?: string;
   type?: string;
-  sortBy?: 'name' | 'likeCount' | 'createdAt';
+  sortBy?: 'name' | 'likeCount' | 'favoriteCount' | 'hotScore' | 'createdAt';  // 扩展排序字段
   sortOrder?: 'asc' | 'desc';
 }
 

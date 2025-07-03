@@ -4,7 +4,7 @@
  */
 
 import AV from 'leancloud-storage';
-import { DailyVote, VoteForm, VoteStats } from '../types/vote';
+import { DailyVote, VoteForm, VoteStats, GamePreference } from '../types/vote';
 import { initDailyVoteTable } from '../utils/initData';
 
 /**
@@ -33,6 +33,7 @@ export const getTodayVote = async (userId: string): Promise<DailyVote | null> =>
       user: result.get('user'),
       wantsToPlay: result.get('wantsToPlay'),
       selectedGames: result.get('selectedGames') || [],
+      gamePreferences: result.get('gamePreferences') || [],
       createdAt: result.get('createdAt'),
       updatedAt: result.get('updatedAt'),
     };
@@ -76,6 +77,7 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
       vote = AV.Object.createWithoutData('DailyVote', existingVote.objectId);
       vote.set('wantsToPlay', voteForm.wantsToPlay);
       vote.set('selectedGames', voteForm.selectedGames);
+      vote.set('gamePreferences', voteForm.gamePreferences || []);
     } else {
       // 创建新投票
       vote = new AV.Object('DailyVote');
@@ -83,6 +85,7 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
       vote.set('user', userId);
       vote.set('wantsToPlay', voteForm.wantsToPlay);
       vote.set('selectedGames', voteForm.selectedGames);
+      vote.set('gamePreferences', voteForm.gamePreferences || []);
     }
     
     const result = await vote.save();
@@ -93,6 +96,7 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
       user: result.get('user'),
       wantsToPlay: result.get('wantsToPlay'),
       selectedGames: result.get('selectedGames') || [],
+      gamePreferences: result.get('gamePreferences') || [],
       createdAt: result.get('createdAt'),
       updatedAt: result.get('updatedAt'),
     };
@@ -117,6 +121,36 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
 };
 
 /**
+ * 计算游戏倾向度统计
+ * @param votes 投票记录列表
+ * @returns 游戏倾向度统计
+ */
+const calculateGameTendencies = (votes: AV.Object[]): Record<string, { averageTendency: number; tendencyCount: number }> => {
+  const tendencyStats: Record<string, { total: number; count: number }> = {};
+  
+  votes.forEach((vote: AV.Object) => {
+    const gamePreferences: GamePreference[] = vote.get('gamePreferences') || [];
+    gamePreferences.forEach(pref => {
+      if (!tendencyStats[pref.gameId]) {
+        tendencyStats[pref.gameId] = { total: 0, count: 0 };
+      }
+      tendencyStats[pref.gameId].total += pref.tendency;
+      tendencyStats[pref.gameId].count += 1;
+    });
+  });
+  
+  const result: Record<string, { averageTendency: number; tendencyCount: number }> = {};
+  Object.entries(tendencyStats).forEach(([gameId, stats]) => {
+    result[gameId] = {
+      averageTendency: stats.total / stats.count,
+      tendencyCount: stats.count,
+    };
+  });
+  
+  return result;
+};
+
+/**
  * 获取今日投票统计
  * @returns 今日投票统计数据
  */
@@ -135,7 +169,7 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
     let wantToPlayCount = 0;
     const gameVoteCounts: Record<string, number> = {};
     
-    votes.forEach(vote => {
+    votes.forEach((vote) => {
       totalVotes++;
       
       if (vote.get('wantsToPlay')) {
@@ -148,6 +182,9 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
       });
     });
     
+    // 计算游戏倾向度统计
+    const gameTendencies = calculateGameTendencies(votes as any);
+    
     // 获取游戏名称，用于topGames
     const gameIds = Object.keys(gameVoteCounts);
     const gameQuery = new AV.Query('Game');
@@ -155,19 +192,20 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
     const games = await gameQuery.find();
     
     const gameNameMap: Record<string, string> = {};
-    games.forEach(game => {
+    games.forEach((game) => {
       const gameId = game.id;
       if (gameId) {
         gameNameMap[gameId] = game.get('name');
       }
     });
     
-    // 计算topGames（按投票数排序）
+    // 计算topGames（按投票数排序），包含平均倾向度
     const topGames = Object.entries(gameVoteCounts)
       .map(([gameId, voteCount]) => ({
         gameId,
         gameName: gameNameMap[gameId] || '未知游戏',
         voteCount,
+        averageTendency: gameTendencies[gameId]?.averageTendency,
       }))
       .sort((a, b) => b.voteCount - a.voteCount)
       .slice(0, 10); // 取前10名
@@ -178,6 +216,7 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
       wantToPlayCount,
       gameVoteCounts,
       topGames,
+      gameTendencies,
     };
   } catch (error: any) {
     console.error('获取投票统计失败:', error);
@@ -196,6 +235,7 @@ export const getTodayVoteStats = async (): Promise<VoteStats> => {
           wantToPlayCount: 0,
           gameVoteCounts: {},
           topGames: [],
+          gameTendencies: {},
         };
       } catch (initError) {
         console.error('自动创建DailyVote表失败:', initError);
@@ -224,7 +264,7 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
     let wantToPlayCount = 0;
     const gameVoteCounts: Record<string, number> = {};
     
-    votes.forEach(vote => {
+    votes.forEach((vote) => {
       totalVotes++;
       
       if (vote.get('wantsToPlay')) {
@@ -237,6 +277,9 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
       });
     });
     
+    // 计算游戏倾向度统计
+    const gameTendencies = calculateGameTendencies(votes as any);
+    
     // 获取游戏名称
     const gameIds = Object.keys(gameVoteCounts);
     const gameQuery = new AV.Query('Game');
@@ -244,19 +287,20 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
     const games = await gameQuery.find();
     
     const gameNameMap: Record<string, string> = {};
-    games.forEach(game => {
+    games.forEach((game) => {
       const gameId = game.id;
       if (gameId) {
         gameNameMap[gameId] = game.get('name');
       }
     });
     
-    // 计算topGames
+    // 计算topGames，包含平均倾向度
     const topGames = Object.entries(gameVoteCounts)
       .map(([gameId, voteCount]) => ({
         gameId,
         gameName: gameNameMap[gameId] || '未知游戏',
         voteCount,
+        averageTendency: gameTendencies[gameId]?.averageTendency,
       }))
       .sort((a, b) => b.voteCount - a.voteCount)
       .slice(0, 10);
@@ -267,6 +311,7 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
       wantToPlayCount,
       gameVoteCounts,
       topGames,
+      gameTendencies,
     };
   } catch (error: any) {
     console.error('获取投票统计失败:', error);
@@ -280,6 +325,7 @@ export const getVoteStatsByDate = async (date: string): Promise<VoteStats> => {
         wantToPlayCount: 0,
         gameVoteCounts: {},
         topGames: [],
+        gameTendencies: {},
       };
     }
     

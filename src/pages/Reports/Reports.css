@@ -1,0 +1,280 @@
+/**
+ * 报表页面样式
+ */
+
+.reports-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.report-section {
+  padding: 20px 0;
+}
+
+/* 图表容器样式 */
+.chart-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+}
+
+/* 统计卡片样式 */
+.reports-page .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.reports-page .ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* 标签页样式 */
+.reports-page .ant-tabs {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.reports-page .ant-tabs-tab {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.reports-page .ant-tabs-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 时间选择器区域 */
+.time-selector-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.time-selector-card .ant-card-body {
+  padding: 20px 24px;
+}
+
+.time-selector-card .ant-typography {
+  color: white !important;
+}
+
+/* 统计数值样式 */
+.reports-page .ant-statistic {
+  text-align: center;
+}
+
+.reports-page .ant-statistic-title {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.reports-page .ant-statistic-content {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.reports-page .ant-statistic-content-prefix {
+  margin-right: 8px;
+  color: #1890ff;
+}
+
+/* 导出按钮区域 */
+.export-buttons {
+  padding: 16px 0;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 24px;
+  text-align: right;
+}
+
+/* 加载状态 */
+.reports-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: white;
+  border-radius: 8px;
+}
+
+/* 空状态样式 */
+.reports-empty {
+  text-align: center;
+  padding: 80px 0;
+  background: white;
+  border-radius: 8px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.reports-empty .ant-empty-img-simple {
+  margin-bottom: 16px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .reports-page {
+    padding: 16px;
+  }
+  
+  .report-section {
+    padding: 16px 0;
+  }
+  
+  .reports-page .ant-tabs {
+    padding: 16px;
+  }
+  
+  .reports-page .ant-statistic-content {
+    font-size: 20px;
+  }
+  
+  /* 移动端图表高度调整 */
+  .chart-mobile {
+    height: 300px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .reports-page {
+    padding: 12px;
+  }
+  
+  .reports-page .ant-tabs {
+    padding: 12px;
+  }
+  
+  .reports-page .ant-statistic-content {
+    font-size: 18px;
+  }
+  
+  /* 更小的移动设备 */
+  .chart-mobile {
+    height: 250px !important;
+  }
+}
+
+/* 图表标题样式 */
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* 报表页面动画 */
+.reports-page .ant-card,
+.reports-page .chart-container {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 标签页内容动画 */
+.ant-tabs-tabpane {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 自定义图表工具提示样式 */
+.reports-tooltip {
+  background: rgba(0, 0, 0, 0.8) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.reports-tooltip .ant-tooltip-inner {
+  color: white !important;
+  font-size: 12px !important;
+  padding: 8px 12px !important;
+}
+
+/* 数据说明区域 */
+.data-info {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 24px;
+}
+
+.data-info .ant-alert-message {
+  color: #389e0d;
+  font-weight: 600;
+}
+
+.data-info .ant-alert-description {
+  color: #52c41a;
+  margin-top: 8px;
+}
+
+/* 报表卡片渐变背景 */
+.gradient-card-1 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.gradient-card-2 {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.gradient-card-3 {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.gradient-card-4 {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  color: white;
+}
+
+.gradient-card-1 .ant-statistic-title,
+.gradient-card-2 .ant-statistic-title,
+.gradient-card-3 .ant-statistic-title,
+.gradient-card-4 .ant-statistic-title {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.gradient-card-1 .ant-statistic-content,
+.gradient-card-2 .ant-statistic-content,
+.gradient-card-3 .ant-statistic-content,
+.gradient-card-4 .ant-statistic-content {
+  color: white !important;
+}
+
+.gradient-card-1 .ant-statistic-content-prefix,
+.gradient-card-2 .ant-statistic-content-prefix,
+.gradient-card-3 .ant-statistic-content-prefix,
+.gradient-card-4 .ant-statistic-content-prefix {
+  color: rgba(255, 255, 255, 0.9) !important;
+} 

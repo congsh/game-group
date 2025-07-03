@@ -6,7 +6,7 @@
 import AV from 'leancloud-storage';
 import { WeekendTeam, TeamForm, TeamFilters, TeamDetails } from '../types/team';
 import { Game } from '../types/game';
-import { initWeekendTeamTable } from '../utils/initData';
+import { initWeekendTeamTable, initSampleGames } from '../utils/initData';
 
 /**
  * 创建周末组队
@@ -78,18 +78,26 @@ export const getWeekendTeams = async (
       query.equalTo('status', filters.status);
     }
 
-    // 排序
-    const sortBy = filters.sortBy || 'eventDate';
-    const sortOrder = filters.sortOrder || 'asc';
-    if (sortOrder === 'desc') {
-      query.descending(sortBy);
+    // 检查是否是自定义排序（需要在前端处理）
+    const needCustomSort = filters.sortBy === 'memberCount';
+    
+    if (!needCustomSort) {
+      // 数据库直接支持的排序
+      const sortBy = filters.sortBy || 'eventDate';
+      const sortOrder = filters.sortOrder || 'asc';
+      if (sortOrder === 'desc') {
+        query.descending(sortBy);
+      } else {
+        query.ascending(sortBy);
+      }
+      
+      // 分页
+      query.skip((page - 1) * pageSize);
+      query.limit(pageSize);
     } else {
-      query.ascending(sortBy);
+      // 自定义排序需要获取更多数据
+      query.limit(1000);
     }
-
-    // 分页
-    query.skip((page - 1) * pageSize);
-    query.limit(pageSize);
 
     // 执行查询
     const [teams, total] = await Promise.all([
@@ -98,8 +106,8 @@ export const getWeekendTeams = async (
     ]);
 
     // 获取游戏信息和用户信息
-    const gameIds = Array.from(new Set(teams.map(team => team.get('game'))));
-    const userIds = Array.from(new Set(teams.flatMap(team => [team.get('leader'), ...team.get('members')])));
+    const gameIds = Array.from(new Set(teams.map((team: any) => team.get('game'))));
+    const userIds = Array.from(new Set(teams.flatMap((team: any) => [team.get('leader'), ...team.get('members')])));
 
     const [games, users] = await Promise.all([
       getGamesByIds(gameIds),
@@ -111,7 +119,7 @@ export const getWeekendTeams = async (
     const userMap = new Map(users.map(user => [user.objectId, user.nickname]));
 
     // 转换为 TeamDetails
-    const teamDetails: TeamDetails[] = teams.map(team => {
+    let teamDetails: TeamDetails[] = teams.map((team: any) => {
       const gameId = team.get('game');
       const leaderId = team.get('leader');
       const memberIds = team.get('members') || [];
@@ -136,6 +144,22 @@ export const getWeekendTeams = async (
         isCurrentUserLeader: false, // 这个会在组件中计算
       };
     });
+
+    // 如果需要自定义排序，进行排序和分页
+    if (needCustomSort) {
+      // 按成员数量排序
+      if (filters.sortBy === 'memberCount') {
+        teamDetails.sort((a, b) => {
+          const order = filters.sortOrder === 'asc' ? 1 : -1;
+          return (a.members.length - b.members.length) * order;
+        });
+      }
+      
+      // 手动分页
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      teamDetails = teamDetails.slice(startIndex, endIndex);
+    }
 
     return { teams: teamDetails, total };
   } catch (error: any) {
@@ -322,19 +346,44 @@ export const getRecommendedTeams = async (userId: string): Promise<TeamDetails[]
     const voteQuery = new AV.Query('DailyVote');
     voteQuery.equalTo('user', userId);
     voteQuery.descending('createdAt');
-    voteQuery.limit(10);
+    voteQuery.limit(15); // 增加获取数量以获得更多倾向度数据
     
     const recentVotes = await voteQuery.find();
     
-    // 分析用户偏好的游戏
-    const preferredGameIds = new Set<string>();
-    recentVotes.forEach(vote => {
+    // 分析用户偏好的游戏和倾向度
+    const gamePreferences = new Map<string, { count: number; totalTendency: number; averageTendency: number }>();
+    
+    recentVotes.forEach((vote) => {
       const selectedGames = vote.get('selectedGames') || [];
-      selectedGames.forEach((gameId: string) => preferredGameIds.add(gameId));
+      const gamePreferencesData = vote.get('gamePreferences') || [];
+      
+      // 处理有倾向度数据的游戏
+      gamePreferencesData.forEach((pref: { gameId: string; tendency: number }) => {
+        if (!gamePreferences.has(pref.gameId)) {
+          gamePreferences.set(pref.gameId, { count: 0, totalTendency: 0, averageTendency: 0 });
+        }
+        const current = gamePreferences.get(pref.gameId)!;
+        current.count += 1;
+        current.totalTendency += pref.tendency;
+        current.averageTendency = current.totalTendency / current.count;
+      });
+      
+      // 处理只有选择但没有倾向度的游戏（向后兼容）
+      selectedGames.forEach((gameId: string) => {
+        if (!gamePreferences.has(gameId)) {
+          gamePreferences.set(gameId, { count: 1, totalTendency: 3, averageTendency: 3 }); // 默认倾向度3
+        } else if (!gamePreferencesData.find((pref: any) => pref.gameId === gameId)) {
+          // 如果该游戏在选择中但没有倾向度数据，补充默认值
+          const current = gamePreferences.get(gameId)!;
+          current.count += 1;
+          current.totalTendency += 3; // 默认倾向度3
+          current.averageTendency = current.totalTendency / current.count;
+        }
+      });
     });
 
     // 如果没有偏好记录，返回最近创建的开放组队
-    if (preferredGameIds.size === 0) {
+    if (gamePreferences.size === 0) {
       const { teams } = await getWeekendTeams(
         { status: 'open', sortBy: 'createdAt', sortOrder: 'desc' },
         1,
@@ -343,42 +392,91 @@ export const getRecommendedTeams = async (userId: string): Promise<TeamDetails[]
       return teams;
     }
 
+    // 根据倾向度对游戏进行排序，优先推荐高倾向度的游戏
+    const sortedPreferences = Array.from(gamePreferences.entries())
+      .sort(([, a], [, b]) => {
+        // 优先考虑平均倾向度，然后考虑频次
+        const scoreA = a.averageTendency * 0.7 + (a.count / 15) * 0.3 * 5; // 归一化频次到5分制
+        const scoreB = b.averageTendency * 0.7 + (b.count / 15) * 0.3 * 5;
+        return scoreB - scoreA;
+      })
+      .slice(0, 8); // 取前8个最偏好的游戏
+
+    const preferredGameIds = sortedPreferences.map(([gameId]) => gameId);
+
     // 获取基于偏好的推荐组队
     const teamQuery = new AV.Query('WeekendTeam');
-    teamQuery.containedIn('game', Array.from(preferredGameIds));
+    teamQuery.containedIn('game', preferredGameIds);
     teamQuery.equalTo('status', 'open');
     teamQuery.notEqualTo('leader', userId); // 排除自己创建的队伍
     teamQuery.descending('createdAt');
-    teamQuery.limit(5);
+    teamQuery.limit(20); // 增加查询数量以便后续排序
 
     const teams = await teamQuery.find();
 
-    // 转换为 TeamDetails（简化版，因为是推荐列表）
-    return Promise.all(
-      teams.map(async team => {
+    // 为每个推荐的组队计算推荐分数
+    const teamsWithScores = await Promise.all(
+      teams.map(async (team) => {
         const gameId = team.get('game');
+        const preference = gamePreferences.get(gameId);
         const game = await getGamesByIds([gameId]).then(games => games[0]);
         
+        // 计算推荐分数
+        let score = 0;
+        if (preference) {
+          // 倾向度权重（40%）
+          score += preference.averageTendency * 0.4;
+          
+          // 频次权重（20%）
+          score += (preference.count / 15) * 5 * 0.2;
+        }
+        
+        // 时间新鲜度权重（20%）- 越新的组队分数越高
+        const hoursSinceCreated = (Date.now() - team.get('createdAt').getTime()) / (1000 * 60 * 60);
+        const freshnesScore = Math.max(0, 5 - hoursSinceCreated / 24); // 24小时内为满分
+        score += freshnesScore * 0.2;
+        
+        // 队伍空缺度权重（20%）- 空缺越多分数越高（更容易加入）
+        const members = team.get('members') || [];
+        const maxMembers = team.get('maxMembers') || 4;
+        const vacancyRate = (maxMembers - members.length) / maxMembers;
+        score += vacancyRate * 5 * 0.2;
+        
         return {
-          objectId: team.id || '',
-          game: gameId,
-          eventDate: team.get('eventDate'),
-          startTime: team.get('startTime'),
-          endTime: team.get('endTime'),
-          leader: team.get('leader'),
-          members: team.get('members') || [],
-          maxMembers: team.get('maxMembers'),
-          status: team.get('status'),
-          createdAt: team.get('createdAt'),
-          updatedAt: team.get('updatedAt'),
-          gameName: game?.name || '未知游戏',
-          leaderName: '推荐队伍',
-          memberNames: [],
-          isCurrentUserMember: false,
-          isCurrentUserLeader: false,
-        } as TeamDetails;
+          team,
+          game,
+          score,
+          preference
+        };
       })
     );
+
+    // 按推荐分数排序，取前5个
+    const topRecommendations = teamsWithScores
+      .sort((a: any, b: any) => b.score - a.score)
+      .slice(0, 5);
+
+    // 转换为 TeamDetails
+    return topRecommendations.map(({ team, game, preference }: any) => {
+      return {
+        objectId: team.id || '',
+        game: team.get('game'),
+        eventDate: team.get('eventDate'),
+        startTime: team.get('startTime'),
+        endTime: team.get('endTime'),
+        leader: team.get('leader'),
+        members: team.get('members') || [],
+        maxMembers: team.get('maxMembers'),
+        status: team.get('status'),
+        createdAt: team.get('createdAt'),
+        updatedAt: team.get('updatedAt'),
+        gameName: game?.name || '未知游戏',
+        leaderName: `推荐队伍${preference ? ` (倾向度: ${preference.averageTendency.toFixed(1)}分)` : ''}`,
+        memberNames: [],
+        isCurrentUserMember: false,
+        isCurrentUserLeader: false,
+      } as TeamDetails;
+    });
   } catch (error) {
     console.error('获取推荐组队失败:', error);
     // 如果推荐失败，返回空数组
@@ -411,8 +509,39 @@ const getGamesByIds = async (gameIds: string[]): Promise<Game[]> => {
       createdAt: game.get('createdAt'),
       updatedAt: game.get('updatedAt'),
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取游戏信息失败:', error);
+    
+    // 如果是404错误（表不存在），尝试初始化游戏表
+    if (error.code === 404 || (error instanceof Error && error.message.includes('Class or object doesn\'t exists'))) {
+      console.warn('Game表不存在，尝试自动创建...');
+      try {
+        await initSampleGames();
+        console.log('Game表创建成功，重新查询...');
+        const query = new AV.Query('Game');
+        query.containedIn('objectId', gameIds);
+        query.limit(1000);
+        const games = await query.find();
+        
+        return games.map(game => ({
+          objectId: game.id || '',
+          name: game.get('name'),
+          minPlayers: game.get('minPlayers'),
+          maxPlayers: game.get('maxPlayers'),
+          platform: game.get('platform'),
+          description: game.get('description'),
+          type: game.get('type'),
+          likeCount: game.get('likeCount'),
+          createdBy: game.get('createdBy'),
+          createdAt: game.get('createdAt'),
+          updatedAt: game.get('updatedAt'),
+        }));
+      } catch (initError) {
+        console.warn('Game表创建失败，返回空数组:', initError);
+        return [];
+      }
+    }
+    
     return [];
   }
 };
@@ -433,8 +562,13 @@ const getUsersByIds = async (userIds: string[]): Promise<Array<{ objectId: strin
       objectId: user.id || '',
       nickname: user.get('nickname') || '未知用户'
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取用户信息失败:', error);
-    return [];
+    
+    // 对于查询不到的用户，返回占位符信息
+    return userIds.map(userId => ({
+      objectId: userId,
+      nickname: '未知用户'
+    }));
   }
 }; 

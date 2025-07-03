@@ -194,6 +194,40 @@ export const initWeekendTeamTable = async (): Promise<void> => {
 };
 
 /**
+ * 初始化 UserFavorite 数据表
+ */
+export const initUserFavoriteTable = async (): Promise<void> => {
+  try {
+    // 获取当前用户
+    const currentUser = AV.User.current();
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+
+    console.log('开始创建UserFavorite表结构...');
+
+    // 直接创建一个临时的 UserFavorite 记录来建立数据表结构
+    const UserFavoriteClass = AV.Object.extend('UserFavorite');
+    const placeholderFavorite = new UserFavoriteClass();
+    
+    placeholderFavorite.set('user', currentUser.id);
+    placeholderFavorite.set('game', '_PLACEHOLDER_GAME_');
+    
+    const savedFavorite = await placeholderFavorite.save();
+    console.log('UserFavorite表创建成功');
+    
+    // 立即删除占位符记录
+    await savedFavorite.destroy();
+    console.log('清理占位符记录完成');
+    
+    console.log('UserFavorite表初始化完成');
+  } catch (error: any) {
+    console.error('初始化UserFavorite表失败:', error);
+    throw error;
+  }
+};
+
+/**
  * 检查并初始化所有数据表
  */
 export const checkAndInitData = async (): Promise<boolean> => {
@@ -202,6 +236,7 @@ export const checkAndInitData = async (): Promise<boolean> => {
     await initSampleGames();
     await initDailyVoteTable();
     await initWeekendTeamTable();
+    await initUserFavoriteTable();
     
     console.log('所有数据表初始化完成');
     return true;
@@ -283,6 +318,9 @@ export const manualInitTables = async (): Promise<void> => {
     console.log('3. 初始化 WeekendTeam 表...');
     await initWeekendTeamTable();
     
+    console.log('4. 初始化 UserFavorite 表...');
+    await initUserFavoriteTable();
+    
     console.log('✅ 所有数据表初始化完成！');
     alert('数据表初始化完成！');
   } catch (error: any) {
@@ -291,7 +329,118 @@ export const manualInitTables = async (): Promise<void> => {
   }
 };
 
+/**
+ * 快速修复数据表缺失问题
+ * 专门用于解决报表页面和周末组队页面的表不存在错误
+ */
+export const quickFixMissingTables = async (): Promise<void> => {
+  try {
+    console.log('🔧 开始快速修复数据表缺失问题...');
+    
+    const currentUser = AV.User.current();
+    if (!currentUser) {
+      console.error('❌ 用户未登录，无法修复数据表');
+      alert('请先登录再执行修复操作');
+      return;
+    }
+
+    const fixes: Array<{name: string; fn: () => Promise<void>}> = [
+      {
+        name: 'UserFavorite表',
+        fn: async () => {
+          try {
+            // 先尝试查询一下是否存在
+            const query = new AV.Query('UserFavorite');
+            query.limit(1);
+            await query.find();
+            console.log('✅ UserFavorite表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建UserFavorite表...');
+              await initUserFavoriteTable();
+              console.log('✅ UserFavorite表创建成功');
+            }
+          }
+        }
+      },
+      {
+        name: 'Game表数据',
+        fn: async () => {
+          try {
+            const query = new AV.Query('Game');
+            const count = await query.count();
+            if (count === 0) {
+              console.log('📝 初始化游戏数据...');
+              await initSampleGames();
+              console.log('✅ 游戏数据初始化成功');
+            } else {
+              console.log('✅ 游戏数据已存在');
+            }
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建Game表并初始化数据...');
+              await initSampleGames();
+              console.log('✅ Game表和数据创建成功');
+            }
+          }
+        }
+      },
+      {
+        name: 'WeekendTeam表',
+        fn: async () => {
+          try {
+            const query = new AV.Query('WeekendTeam');
+            query.limit(1);
+            await query.find();
+            console.log('✅ WeekendTeam表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建WeekendTeam表...');
+              await initWeekendTeamTable();
+              console.log('✅ WeekendTeam表创建成功');
+            }
+          }
+        }
+      },
+      {
+        name: 'DailyVote表',
+        fn: async () => {
+          try {
+            const query = new AV.Query('DailyVote');
+            query.limit(1);
+            await query.find();
+            console.log('✅ DailyVote表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建DailyVote表...');
+              await initDailyVoteTable();
+              console.log('✅ DailyVote表创建成功');
+            }
+          }
+        }
+      }
+    ];
+
+    // 逐个执行修复
+    for (const fix of fixes) {
+      try {
+        console.log(`🔍 检查 ${fix.name}...`);
+        await fix.fn();
+      } catch (error: any) {
+        console.error(`❌ 修复 ${fix.name} 失败:`, error);
+      }
+    }
+
+    console.log('🎉 快速修复完成！');
+    alert('数据表修复完成！请刷新页面查看效果。');
+  } catch (error: any) {
+    console.error('❌ 快速修复失败:', error);
+    alert(`修复失败: ${error.message}`);
+  }
+};
+
 // 将函数暴露到全局作用域，方便调试
 if (typeof window !== 'undefined') {
   (window as any).manualInitTables = manualInitTables;
+  (window as any).quickFixMissingTables = quickFixMissingTables;
 } 

@@ -19,23 +19,25 @@ import {
   Tag,
   Alert,
   Spin,
-  message
+  message,
+  Rate
 } from 'antd';
 import {
   TrophyOutlined,
   UserOutlined,
   PlayCircleOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  StarOutlined
 } from '@ant-design/icons';
 import { useVoteStore, useHasVotedToday, useTodayWantsToPlay, useTodaySelectedGames } from '../../store/votes';
 import { useGameStore } from '../../store/games';
-import { VoteForm } from '../../types/vote';
+import { VoteForm, GamePreference } from '../../types/vote';
 import { initDailyVoteTable } from '../../utils/initData';
 import PageHeader from '../../components/common/PageHeader';
 import './DailyVote.css';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 /**
@@ -64,6 +66,8 @@ const DailyVote: React.FC = () => {
   // 本地状态
   const [wantsToPlay, setWantsToPlay] = useState(false);
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
+  const [gamePreferences, setGamePreferences] = useState<GamePreference[]>([]);
+  const [voteSortBy, setVoteSortBy] = useState<'voteCount' | 'averageTendency' | 'gameName'>('voteCount');
   
   // 从状态管理获取的衍生状态
   const hasVoted = useHasVotedToday();
@@ -86,9 +90,11 @@ const DailyVote: React.FC = () => {
     if (todayVote) {
       setWantsToPlay(todayVote.wantsToPlay);
       setSelectedGames(todayVote.selectedGames);
+      setGamePreferences(todayVote.gamePreferences || []);
       form.setFieldsValue({
         wantsToPlay: todayVote.wantsToPlay,
-        selectedGames: todayVote.selectedGames
+        selectedGames: todayVote.selectedGames,
+        gamePreferences: todayVote.gamePreferences || []
       });
     }
   }, [todayVote, form]);
@@ -98,7 +104,12 @@ const DailyVote: React.FC = () => {
    */
   const handleSubmit = async (values: VoteForm) => {
     try {
-      await submitVote(values);
+      // 确保包含倾向度数据
+      const submitData: VoteForm = {
+        ...values,
+        gamePreferences: gamePreferences
+      };
+      await submitVote(submitData);
       message.success(hasVoted ? '投票已更新！' : '投票已提交！');
     } catch (error) {
       message.error('投票失败，请重试');
@@ -112,6 +123,7 @@ const DailyVote: React.FC = () => {
     setWantsToPlay(checked);
     if (!checked) {
       setSelectedGames([]);
+      setGamePreferences([]);
       form.setFieldValue('selectedGames', []);
     }
   };
@@ -121,15 +133,57 @@ const DailyVote: React.FC = () => {
    */
   const handleGameSelectionChange = (gameIds: string[]) => {
     setSelectedGames(gameIds);
+    
+    // 更新倾向度数据，移除未选中的游戏，添加新选中的游戏
+    const newPreferences = gamePreferences.filter((pref: GamePreference) => 
+      gameIds.includes(pref.gameId)
+    );
+    
+    // 为新选中的游戏添加默认倾向度
+    gameIds.forEach(gameId => {
+      if (!newPreferences.find((pref: GamePreference) => pref.gameId === gameId)) {
+        newPreferences.push({
+          gameId: gameId,
+          tendency: 3 // 默认倾向度为3分
+        });
+      }
+    });
+    
+    setGamePreferences(newPreferences);
   };
 
   /**
-   * 获取今日选中游戏的名称
+   * 处理游戏倾向度变化
    */
-  const getSelectedGameNames = (): string[] => {
+  const handleTendencyChange = (gameId: string, tendency: number) => {
+    const newPreferences = gamePreferences.map((pref: GamePreference) =>
+      pref.gameId === gameId ? { ...pref, tendency } : pref
+    );
+    setGamePreferences(newPreferences);
+  };
+
+  /**
+   * 获取游戏的倾向度分数
+   */
+  const getGameTendency = (gameId: string): number => {
+    const preference = gamePreferences.find((pref: GamePreference) => pref.gameId === gameId);
+    return preference?.tendency || 3;
+  };
+
+  /**
+   * 获取今日选中游戏的名称和倾向度
+   */
+  const getSelectedGameNamesWithTendency = (): Array<{name: string, tendency?: number}> => {
     return todaySelectedGameIds
-      .map(gameId => games.find(game => game.objectId === gameId)?.name)
-      .filter(Boolean) as string[];
+      .map(gameId => {
+        const game = games.find((game: any) => game.objectId === gameId);
+        const preference = todayVote?.gamePreferences?.find((pref: GamePreference) => pref.gameId === gameId);
+        return game ? {
+          name: game.name,
+          tendency: preference?.tendency
+        } : null;
+      })
+      .filter(Boolean) as Array<{name: string, tendency?: number}>;
   };
 
   /**
@@ -140,6 +194,30 @@ const DailyVote: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  };
+
+  /**
+   * 处理投票结果排序
+   */
+  const getSortedTopGames = () => {
+    if (!todayStats?.topGames) return [];
+    
+    const games = [...todayStats.topGames];
+    
+    switch (voteSortBy) {
+      case 'voteCount':
+        return games.sort((a, b) => b.voteCount - a.voteCount);
+      case 'averageTendency':
+        return games.sort((a, b) => {
+          const tendencyA = a.averageTendency || 0;
+          const tendencyB = b.averageTendency || 0;
+          return tendencyB - tendencyA;
+        });
+      case 'gameName':
+        return games.sort((a, b) => a.gameName.localeCompare(b.gameName));
+      default:
+        return games;
+    }
   };
 
   /**
@@ -174,7 +252,7 @@ const DailyVote: React.FC = () => {
     <div className="daily-vote-container">
       <PageHeader
         title="每日投票"
-        subtitle="每天投票选择你想玩的游戏，让我们一起决定今晚玩什么！"
+        subtitle="每天投票选择你想玩的游戏，并为它们评分（1-5分），让我们一起决定今晚玩什么！"
         icon={<PlayCircleOutlined />}
       />
 
@@ -233,8 +311,15 @@ const DailyVote: React.FC = () => {
                       <div>
                         选择的游戏：
                         <div style={{ marginTop: 8 }}>
-                          {getSelectedGameNames().map(gameName => (
-                            <Tag key={gameName} color="blue">{gameName}</Tag>
+                          {getSelectedGameNamesWithTendency().map(item => (
+                            <Tag key={item.name} color="blue">
+                              {item.name}
+                              {item.tendency && (
+                                <span style={{ marginLeft: 4 }}>
+                                  <StarOutlined /> {item.tendency}分
+                                </span>
+                              )}
+                            </Tag>
                           ))}
                         </div>
                       </div>
@@ -253,7 +338,8 @@ const DailyVote: React.FC = () => {
               onFinish={handleSubmit}
               initialValues={{
                 wantsToPlay: false,
-                selectedGames: []
+                selectedGames: [],
+                gamePreferences: []
               }}
             >
               <Form.Item
@@ -269,27 +355,69 @@ const DailyVote: React.FC = () => {
               </Form.Item>
 
               {wantsToPlay && (
-                <Form.Item
-                  name="selectedGames"
-                  label="选择想玩的游戏（可多选）"
-                  rules={[
-                    { required: wantsToPlay, message: '请至少选择一个游戏' }
-                  ]}
-                >
-                  <Select
-                    mode="multiple"
-                    placeholder="请选择游戏"
-                    showSearch
-                    onChange={handleGameSelectionChange}
+                <>
+                  <Form.Item
+                    name="selectedGames"
+                    label="选择想玩的游戏（可多选）"
+                    rules={[
+                      { required: wantsToPlay, message: '请至少选择一个游戏' }
+                    ]}
                   >
-                    {games.map(game => (
-                      <Option key={game.objectId} value={game.objectId}>
-                        {game.name} ({game.minPlayers}-{game.maxPlayers}人)
-                        {game.platform && <Text type="secondary"> - {game.platform}</Text>}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
+                    <Select
+                      mode="multiple"
+                      placeholder="请选择游戏"
+                      showSearch
+                      onChange={handleGameSelectionChange}
+                    >
+                      {games.map(game => (
+                        <Option key={game.objectId} value={game.objectId}>
+                          {game.name} ({game.minPlayers}-{game.maxPlayers}人)
+                          {game.platform && <Text type="secondary"> - {game.platform}</Text>}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  {/* 游戏倾向度评分 */}
+                  {selectedGames.length > 0 && (
+                    <Form.Item
+                      label={
+                        <Space>
+                          <StarOutlined />
+                          为选中的游戏评分 (1-5分)
+                        </Space>
+                      }
+                    >
+                      <div style={{ background: '#fafafa', padding: '16px', borderRadius: '6px' }}>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: '12px' }}>
+                          请为每个游戏评分，1分=不太想玩，5分=非常想玩
+                        </Text>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          {selectedGames.map(gameId => {
+                            const game = games.find(g => g.objectId === gameId);
+                            if (!game) return null;
+                            
+                            return (
+                              <div key={gameId} style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                padding: '8px 0'
+                              }}>
+                                <Text strong>{game.name}</Text>
+                                <Rate
+                                  value={getGameTendency(gameId)}
+                                  onChange={(value) => handleTendencyChange(gameId, value)}
+                                  style={{ fontSize: '16px' }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </Space>
+                      </div>
+                    </Form.Item>
+                  )}
+                </>
               )}
 
               <Form.Item>
@@ -342,20 +470,40 @@ const DailyVote: React.FC = () => {
                 {/* 热门游戏排行 */}
                 {todayStats.topGames.length > 0 && (
                   <div>
-                    <Title level={4}>今日热门游戏</Title>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <Title level={4} style={{ margin: 0 }}>今日热门游戏</Title>
+                      <Select
+                        size="small"
+                        value={voteSortBy}
+                        onChange={setVoteSortBy}
+                        style={{ width: 120 }}
+                      >
+                        <Option value="voteCount">👍 票数</Option>
+                        <Option value="averageTendency">⭐ 倾向度</Option>
+                        <Option value="gameName">🔤 名称</Option>
+                      </Select>
+                    </div>
                     <List
                       size="small"
-                      dataSource={todayStats.topGames.slice(0, 5)}
+                      dataSource={getSortedTopGames().slice(0, 5)}
                       renderItem={(game, index) => (
                         <List.Item>
-                          <Space>
-                            <Tag 
-                              color={index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? '#cd7f32' : 'default'}
-                            >
-                              #{index + 1}
-                            </Tag>
-                            <Text strong>{game.gameName}</Text>
-                            <Text type="secondary">{game.voteCount} 票</Text>
+                          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                            <Space>
+                              <Tag 
+                                color={index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? '#cd7f32' : 'default'}
+                              >
+                                #{index + 1}
+                              </Tag>
+                              <Text strong>{game.gameName}</Text>
+                              <Text type="secondary">{game.voteCount} 票</Text>
+                            </Space>
+                            {game.averageTendency && (
+                              <Space>
+                                <StarOutlined style={{ color: '#faad14' }} />
+                                <Text type="secondary">{game.averageTendency.toFixed(1)}分</Text>
+                              </Space>
+                            )}
                           </Space>
                         </List.Item>
                       )}

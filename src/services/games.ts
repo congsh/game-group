@@ -35,29 +35,37 @@ export const getGames = async (
       query.equalTo('type', filters.type);
     }
     
-    // 排序
-    switch (filters.sortBy) {
-      case 'name':
-        if (filters.sortOrder === 'desc') {
-          query.descending('name');
-        } else {
-          query.ascending('name');
-        }
-        break;
-      case 'likeCount':
-        if (filters.sortOrder === 'asc') {
-          query.ascending('likeCount');
-        } else {
-          query.descending('likeCount');
-        }
-        break;
-      default:
-        query.descending('createdAt');
-    }
+    // 如果是收藏数或综合热度排序，需要先获取所有数据再排序
+    const needCustomSort = filters.sortBy === 'favoriteCount' || filters.sortBy === 'hotScore';
     
-    // 分页
-    query.skip((page - 1) * limit);
-    query.limit(limit);
+    if (!needCustomSort) {
+      // 普通排序（数据库支持的字段）
+      switch (filters.sortBy) {
+        case 'name':
+          if (filters.sortOrder === 'desc') {
+            query.descending('name');
+          } else {
+            query.ascending('name');
+          }
+          break;
+        case 'likeCount':
+          if (filters.sortOrder === 'asc') {
+            query.ascending('likeCount');
+          } else {
+            query.descending('likeCount');
+          }
+          break;
+        default:
+          query.descending('createdAt');
+      }
+      
+      // 分页
+      query.skip((page - 1) * limit);
+      query.limit(limit);
+    } else {
+      // 自定义排序需要获取更多数据
+      query.limit(1000); // 获取足够多的数据用于排序
+    }
     
     // 包含创建者信息
     query.include('createdBy');
@@ -67,21 +75,71 @@ export const getGames = async (
       query.count()
     ]);
     
-    const games = results.map(item => ({
-      objectId: item.id || '',
-      name: item.get('name') || '',
-      minPlayers: item.get('minPlayers') || 0,
-      maxPlayers: item.get('maxPlayers') || 0,
-      platform: item.get('platform') || '',
-      description: item.get('description') || '',
-      type: item.get('type') || '',
-      likeCount: item.get('likeCount') || 0,
-      createdBy: item.get('createdBy')?.id || item.get('createdBy') || '',
-      createdAt: item.get('createdAt') || new Date(),
-      updatedAt: item.get('updatedAt') || new Date()
-    }));
+    // 获取所有用户的收藏数据来计算每个游戏的收藏数
+    let gameWithStats = await Promise.all(
+      results.map(async (item) => {
+        const gameId = item.id || '';
+        
+        // 计算收藏数
+        let favoriteCount = 0;
+        try {
+          const userQuery = new AV.Query(AV.User);
+          userQuery.equalTo('favoriteGames', gameId);
+          favoriteCount = await userQuery.count();
+        } catch (error) {
+          console.log('计算收藏数失败，使用默认值0:', error);
+          favoriteCount = 0;
+        }
+        
+        const likeCount = item.get('likeCount') || 0;
+        
+        // 计算综合热度分数
+        // 热度 = 点赞数 * 0.6 + 收藏数 * 0.4 + 时间衰减因子
+        const createdAt = item.get('createdAt') || new Date();
+        const daysSinceCreated = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+        const timeFactor = Math.max(0, 30 - daysSinceCreated) / 30; // 30天内的时间加成
+        const hotScore = (likeCount * 0.6 + favoriteCount * 0.4) * (1 + timeFactor * 0.2);
+        
+        return {
+          objectId: gameId,
+          name: item.get('name') || '',
+          minPlayers: item.get('minPlayers') || 0,
+          maxPlayers: item.get('maxPlayers') || 0,
+          platform: item.get('platform') || '',
+          description: item.get('description') || '',
+          type: item.get('type') || '',
+          likeCount: likeCount,
+          favoriteCount: favoriteCount,
+          hotScore: Number(hotScore.toFixed(2)),
+          createdBy: item.get('createdBy')?.id || item.get('createdBy') || '',
+          createdAt: item.get('createdAt') || new Date(),
+          updatedAt: item.get('updatedAt') || new Date()
+        };
+      })
+    );
     
-    return { games, total };
+    // 如果需要自定义排序，进行排序和分页
+    if (needCustomSort) {
+      // 排序
+      if (filters.sortBy === 'favoriteCount') {
+        gameWithStats.sort((a, b) => {
+          const order = filters.sortOrder === 'asc' ? 1 : -1;
+          return (a.favoriteCount - b.favoriteCount) * order;
+        });
+      } else if (filters.sortBy === 'hotScore') {
+        gameWithStats.sort((a, b) => {
+          const order = filters.sortOrder === 'asc' ? 1 : -1;
+          return (a.hotScore - b.hotScore) * order;
+        });
+      }
+      
+      // 手动分页
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      gameWithStats = gameWithStats.slice(startIndex, endIndex);
+    }
+    
+    return { games: gameWithStats, total };
   } catch (error: any) {
     // 如果是数据表不存在的错误，返回空结果
     if (error.code === 404) {
@@ -104,6 +162,25 @@ export const getGameById = async (gameId: string): Promise<Game> => {
     query.include('createdBy');
     const game = await query.get(gameId);
     
+    // 计算收藏数
+    let favoriteCount = 0;
+    try {
+      const userQuery = new AV.Query(AV.User);
+      userQuery.equalTo('favoriteGames', game.id);
+      favoriteCount = await userQuery.count();
+    } catch (error) {
+      console.log('计算收藏数失败，使用默认值0:', error);
+      favoriteCount = 0;
+    }
+    
+    const likeCount = game.get('likeCount') || 0;
+    
+    // 计算综合热度分数
+    const createdAt = game.get('createdAt') || new Date();
+    const daysSinceCreated = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+    const timeFactor = Math.max(0, 30 - daysSinceCreated) / 30;
+    const hotScore = (likeCount * 0.6 + favoriteCount * 0.4) * (1 + timeFactor * 0.2);
+    
     return {
       objectId: game.id || '',
       name: game.get('name') || '',
@@ -112,9 +189,11 @@ export const getGameById = async (gameId: string): Promise<Game> => {
       platform: game.get('platform') || '',
       description: game.get('description') || '',
       type: game.get('type') || '',
-      likeCount: game.get('likeCount') || 0,
+      likeCount: likeCount,
+      favoriteCount: favoriteCount,
+      hotScore: Number(hotScore.toFixed(2)),
       createdBy: game.get('createdBy')?.id || game.get('createdBy') || '',
-      createdAt: game.get('createdAt') || new Date(),
+      createdAt: createdAt,
       updatedAt: game.get('updatedAt') || new Date()
     };
   } catch (error: any) {

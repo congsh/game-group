@@ -27,7 +27,7 @@ export interface TeamFilters {
   gameId?: string;
   eventDate?: string;
   status?: 'open' | 'full' | 'closed';
-  sortBy?: 'eventDate' | 'createdAt';
+  sortBy?: 'eventDate' | 'createdAt' | 'memberCount' | 'startTime';  // 扩展排序选项
   sortOrder?: 'asc' | 'desc';
 }
 
