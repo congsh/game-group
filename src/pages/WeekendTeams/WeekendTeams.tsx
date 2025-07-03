@@ -317,6 +317,41 @@ const WeekendTeams: React.FC = () => {
                   <p><strong>队长：</strong>{team.leaderName}</p>
                   <p><strong>时间：</strong>{team.eventDate} {team.startTime}-{team.endTime}</p>
                   <p><strong>人数：</strong>{team.members.length}/{team.maxMembers}</p>
+                  {team.memberTimeInfo && team.memberTimeInfo.length > 1 && (
+                    <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                      <CalendarOutlined style={{ marginRight: '4px' }} />
+                      最新加入: {(() => {
+                        // 找到最后加入的非队长成员
+                        const nonLeaderMembers = team.memberTimeInfo
+                          .filter(member => member.userId !== team.leader)
+                          .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
+                        
+                        if (nonLeaderMembers.length > 0) {
+                          const latestMember = nonLeaderMembers[0];
+                          const joinTime = new Date(latestMember.joinedAt);
+                          const now = new Date();
+                          const timeDiff = now.getTime() - joinTime.getTime();
+                          const minutesDiff = Math.floor(timeDiff / (1000 * 60));
+                          const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
+                          const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                          
+                          let timeAgo = '';
+                          if (daysDiff > 0) {
+                            timeAgo = `${daysDiff}天前`;
+                          } else if (hoursDiff > 0) {
+                            timeAgo = `${hoursDiff}小时前`;
+                          } else if (minutesDiff > 0) {
+                            timeAgo = `${minutesDiff}分钟前`;
+                          } else {
+                            timeAgo = '刚刚';
+                          }
+                          
+                          return `${latestMember.username} (${timeAgo})`;
+                        }
+                        return '队长创建';
+                      })()}
+                    </p>
+                  )}
                 </div>
               </Card>
             </Col>

@@ -1,5 +1,147 @@
 # 故障排除指南
 
+## 🚨 403权限错误排查指南
+
+### 问题症状
+浏览器控制台显示：`Failed to load resource: the server responded with a status of 403 ()`
+
+### 常见原因与解决方案
+
+#### 1️⃣ LeanCloud应用域名限制
+**问题**：LeanCloud控制台设置了严格的域名白名单
+
+**解决方案**：
+1. 登录 [LeanCloud控制台](https://console.leancloud.cn/)
+2. 进入你的应用 → 设置 → 安全中心
+3. 在"Web 安全域名"中添加：
+   - `http://localhost:3000` (开发环境)
+   - `http://127.0.0.1:3000` (本地环境)
+   - 你的生产域名
+
+#### 2️⃣ API访问权限配置错误
+**问题**：数据表的ACL（访问控制列表）设置过于严格
+
+**解决方案**：
+1. 在LeanCloud控制台 → 数据存储 → 结构化数据
+2. 检查每个数据表（Game、DailyVote、WeekendTeam、UserFavorite）
+3. 点击"其他" → "权限设置"
+4. 确保以下权限设置：
+   - **find权限**：允许所有用户
+   - **get权限**：允许所有用户
+   - **create权限**：仅登录用户
+   - **update权限**：仅创建者和登录用户
+   - **delete权限**：仅创建者
+
+#### 3️⃣ LeanCloud应用配置问题
+**问题**：AppId、AppKey或ServerURL配置错误
+
+**解决方案**：
+1. 检查 `src/config/leancloud.config.ts` 文件
+2. 确认配置信息与LeanCloud控制台一致：
+   ```typescript
+   export const LEANCLOUD_CONFIG = {
+     appId: 'Kdx6AZMdQRwQXsAIa45L8wb5-gzGzoHsz',
+     appKey: 'T5SUIFGSeWjK1H7yrsULt79j',
+     serverURL: 'https://kdx6azmd.lc-cn-n1-shared.com'
+   };
+   ```
+
+#### 4️⃣ 环境变量覆盖问题
+**问题**：本地环境变量覆盖了正确的配置
+
+**解决方案**：
+1. 检查项目根目录是否存在 `.env.local` 文件
+2. 如果存在，确认其中的LeanCloud配置：
+   ```bash
+   REACT_APP_LEANCLOUD_APP_ID=Kdx6AZMdQRwQXsAIa45L8wb5-gzGzoHsz
+   REACT_APP_LEANCLOUD_APP_KEY=T5SUIFGSeWjK1H7yrsULt79j
+   REACT_APP_LEANCLOUD_SERVER_URL=https://kdx6azmd.lc-cn-n1-shared.com
+   ```
+3. 如果配置错误，请修正或删除该文件
+
+#### 5️⃣ LeanCloud服务状态异常
+**问题**：LeanCloud服务暂时不可用
+
+**解决方案**：
+1. 访问 [LeanCloud状态页面](https://status.leancloud.cn/)
+2. 检查服务是否正常运行
+3. 如果服务异常，等待恢复后重试
+
+### 🔧 快速修复步骤
+
+1. **检查网络连接**
+   ```javascript
+   // 在浏览器控制台执行
+   fetch('https://kdx6azmd.lc-cn-n1-shared.com/1.1/ping')
+     .then(response => console.log('LeanCloud连接状态:', response.status))
+     .catch(error => console.error('连接失败:', error));
+   ```
+
+2. **验证配置**
+   ```javascript
+   // 在浏览器控制台执行
+   console.log('当前LeanCloud配置:', {
+     appId: process.env.REACT_APP_LEANCLOUD_APP_ID || 'Kdx6AZMdQRwQXsAIa45L8wb5-gzGzoHsz',
+     serverURL: process.env.REACT_APP_LEANCLOUD_SERVER_URL || 'https://kdx6azmd.lc-cn-n1-shared.com'
+   });
+   ```
+
+3. **重新初始化LeanCloud**
+   ```javascript
+   // 在浏览器控制台执行
+   window.location.reload(); // 简单重启
+   ```
+
+### 🔍 详细诊断
+
+如果上述方法无效，请在浏览器控制台执行以下代码收集详细信息：
+
+```javascript
+// 诊断脚本
+(async function() {
+  console.log('=== LeanCloud 403错误诊断 ===');
+  
+  // 1. 检查当前配置
+  console.log('1. 当前配置:');
+  console.log('   AppId:', process.env.REACT_APP_LEANCLOUD_APP_ID || 'Kdx6AZMdQRwQXsAIa45L8wb5-gzGzoHsz');
+  console.log('   ServerURL:', process.env.REACT_APP_LEANCLOUD_SERVER_URL || 'https://kdx6azmd.lc-cn-n1-shared.com');
+  
+  // 2. 测试网络连接
+  console.log('2. 测试网络连接:');
+  try {
+    const response = await fetch('https://kdx6azmd.lc-cn-n1-shared.com/1.1/ping');
+    console.log('   连接状态:', response.status, response.statusText);
+  } catch (error) {
+    console.error('   连接失败:', error.message);
+  }
+  
+  // 3. 检查用户登录状态
+  console.log('3. 用户状态:');
+  console.log('   当前用户:', AV.User.current());
+  
+  // 4. 测试简单查询
+  console.log('4. 测试数据表访问:');
+  try {
+    const query = new AV.Query('_User');
+    query.limit(1);
+    const result = await query.find();
+    console.log('   _User表访问正常');
+  } catch (error) {
+    console.error('   _User表访问失败:', error.message);
+  }
+  
+  console.log('=== 诊断完成 ===');
+})();
+```
+
+### 📞 联系支持
+
+如果问题仍未解决，请提供：
+1. 完整的错误信息（包括控制台日志）
+2. 诊断脚本的输出结果
+3. 当前使用的域名和环境
+4. LeanCloud控制台的权限设置截图
+
 ## 常见问题及解决方案
 
 ### 1. 周末组队页面显示"未知游戏"和"未知队长"

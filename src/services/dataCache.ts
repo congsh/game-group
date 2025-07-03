@@ -573,4 +573,72 @@ export const warmupCaches = async (): Promise<void> => {
   }
 };
 
+/**
+ * 清除所有缓存
+ * 用于解决403权限问题和数据同步问题
+ */
+export const clearAllCaches = (): void => {
+  console.log('开始清除所有缓存...');
+  
+  // 清除内存缓存
+  dataCache.clear();
+  console.log('✅ 内存缓存已清除');
+  
+  // 清除localStorage中的相关数据
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.includes('game') || 
+        key.includes('vote') || 
+        key.includes('team') || 
+        key.includes('favorite') ||
+        key.includes('leancloud')
+      )) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+    });
+    
+    if (keysToRemove.length > 0) {
+      console.log(`✅ localStorage缓存已清除 (${keysToRemove.length}个条目)`);
+    }
+  } catch (error) {
+    console.warn('清除localStorage缓存时出现问题:', error);
+  }
+  
+  // 清除sessionStorage中的相关数据
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && (
+        key.includes('game') || 
+        key.includes('vote') || 
+        key.includes('team') || 
+        key.includes('favorite') ||
+        key.includes('leancloud')
+      )) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      sessionStorage.removeItem(key);
+    });
+    
+    if (keysToRemove.length > 0) {
+      console.log(`✅ sessionStorage缓存已清除 (${keysToRemove.length}个条目)`);
+    }
+  } catch (error) {
+    console.warn('清除sessionStorage缓存时出现问题:', error);
+  }
+  
+  console.log('🎯 所有缓存清除完成');
+};
+
 export default dataCache; 

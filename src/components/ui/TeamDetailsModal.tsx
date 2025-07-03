@@ -260,11 +260,17 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
           }
         >
           <List
-            dataSource={team.memberNames.map((name, index) => ({
-              name,
-              id: team.members[index],
-              isLeader: team.members[index] === team.leader
-            }))}
+            dataSource={team.memberNames.map((name, index) => {
+              const memberId = team.members[index];
+              const memberTimeInfo = team.memberTimeInfo?.find(info => info.userId === memberId);
+              
+              return {
+                name,
+                id: memberId,
+                isLeader: memberId === team.leader,
+                timeInfo: memberTimeInfo
+              };
+            })}
             renderItem={(member) => (
               <List.Item key={member.id}>
                 <List.Item.Meta
@@ -276,6 +282,28 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
                         <Tag color="gold" icon={<CrownOutlined />}>
                           队长
                         </Tag>
+                      )}
+                    </Space>
+                  }
+                  description={
+                    <Space direction="vertical" size={4}>
+                      {member.timeInfo && (
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          <ClockCircleOutlined style={{ marginRight: 4 }} />
+                          游戏时间: {member.timeInfo.startTime} - {member.timeInfo.endTime}
+                        </Text>
+                      )}
+                      {member.timeInfo?.joinedAt && (
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          <CalendarOutlined style={{ marginRight: 4 }} />
+                          加入时间: {new Date(member.timeInfo.joinedAt).toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
                       )}
                     </Space>
                   }
@@ -300,7 +328,13 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
         {/* 创建时间 */}
         <div style={{ marginTop: 16, textAlign: 'center' }}>
           <Text type="secondary">
-            创建于 {new Date(team.createdAt).toLocaleString()}
+            创建于 {new Date(team.createdAt).toLocaleString('zh-CN', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
           </Text>
         </div>
 
@@ -318,7 +352,12 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
           >
             <List
               size="small"
-              dataSource={team.memberTimeInfo}
+              dataSource={team.memberTimeInfo.sort((a, b) => {
+                // 队长排在最前面，其他按加入时间排序
+                if (a.userId === team.leader) return -1;
+                if (b.userId === team.leader) return 1;
+                return new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime();
+              })}
               renderItem={(memberTime) => (
                 <List.Item key={memberTime.userId}>
                   <List.Item.Meta
@@ -331,9 +370,20 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
                       </Space>
                     }
                     description={
-                      <Space>
-                        <ClockCircleOutlined />
-                        {memberTime.startTime} - {memberTime.endTime}
+                      <Space direction="vertical" size={4}>
+                        <Text style={{ fontSize: '13px' }}>
+                          <ClockCircleOutlined style={{ marginRight: 4 }} />
+                          游戏时间: {memberTime.startTime} - {memberTime.endTime}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          <CalendarOutlined style={{ marginRight: 4 }} />
+                          加入时间: {new Date(memberTime.joinedAt).toLocaleString('zh-CN', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
                       </Space>
                     }
                   />

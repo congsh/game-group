@@ -625,6 +625,161 @@ export const fixFavoriteDataConsistency = async (): Promise<void> => {
   }
 };
 
+/**
+ * 403错误诊断和自动修复工具
+ * 用于快速解决LeanCloud权限问题
+ */
+export const diagnose403Error = async (): Promise<void> => {
+  console.log('🔍 开始403错误诊断...');
+  
+  try {
+    // 1. 检查LeanCloud初始化状态
+    console.log('1. 检查LeanCloud配置:');
+    const config = {
+      appId: process.env.REACT_APP_LEANCLOUD_APP_ID || 'Kdx6AZMdQRwQXsAIa45L8wb5-gzGzoHsz',
+      appKey: process.env.REACT_APP_LEANCLOUD_APP_KEY || 'T5SUIFGSeWjK1H7yrsULt79j',
+      serverURL: process.env.REACT_APP_LEANCLOUD_SERVER_URL || 'https://kdx6azmd.lc-cn-n1-shared.com'
+    };
+    console.log('   配置信息:', {
+      appId: config.appId.substring(0, 8) + '...',
+      hasAppKey: !!config.appKey,
+      serverURL: config.serverURL
+    });
+
+    // 2. 测试网络连接
+    console.log('2. 测试网络连接:');
+    try {
+      const response = await fetch(`${config.serverURL}/1.1/ping`);
+      console.log(`   ✅ 网络连接正常 (状态码: ${response.status})`);
+    } catch (error: any) {
+      console.error(`   ❌ 网络连接失败: ${error.message}`);
+      throw new Error('网络连接问题：请检查网络或LeanCloud服务状态');
+    }
+
+    // 3. 检查用户登录状态
+    console.log('3. 检查用户状态:');
+    const currentUser = AV.User.current();
+    if (currentUser) {
+      console.log(`   ✅ 用户已登录: ${currentUser.get('username') || currentUser.id}`);
+    } else {
+      console.log('   ⚠️ 用户未登录，某些操作可能受限');
+    }
+
+    // 4. 测试基础API访问
+    console.log('4. 测试API访问权限:');
+    
+    try {
+      // 测试查询_User表（需要特殊权限）
+      const userQuery = new AV.Query('_User');
+      userQuery.limit(1);
+      await userQuery.find();
+      console.log('   ✅ _User表访问正常');
+    } catch (error: any) {
+      if (error.code === 403) {
+        console.log('   ⚠️ _User表访问受限（这是正常的安全设置）');
+      } else {
+        console.error('   ❌ _User表访问异常:', error.message);
+      }
+    }
+
+    try {
+      // 测试Game表访问
+      const gameQuery = new AV.Query('Game');
+      gameQuery.limit(1);
+      await gameQuery.find();
+      console.log('   ✅ Game表访问正常');
+    } catch (error: any) {
+      if (error.code === 404) {
+        console.log('   ⚠️ Game表不存在（将尝试创建）');
+        try {
+          await quickInitTable();
+          console.log('   ✅ Game表已创建');
+        } catch (initError: any) {
+          console.error('   ❌ Game表创建失败:', initError.message);
+        }
+      } else if (error.code === 403) {
+        console.error('   ❌ Game表访问被拒绝 - 这需要在LeanCloud控制台配置权限');
+        throw new Error('Game表访问权限不足，请检查LeanCloud控制台的数据表权限设置');
+      } else {
+        console.error('   ❌ Game表访问异常:', error.message);
+      }
+    }
+
+    // 5. 检查域名白名单
+    console.log('5. 检查域名配置:');
+    const currentDomain = window.location.origin;
+    console.log(`   当前域名: ${currentDomain}`);
+    
+    if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
+      console.log('   ⚠️ 开发环境域名，请确保在LeanCloud控制台添加到安全域名白名单:');
+      console.log('      - http://localhost:3000');
+      console.log('      - http://127.0.0.1:3000');
+    }
+
+    console.log('✅ 403错误诊断完成！');
+    
+  } catch (error: any) {
+    console.error('❌ 诊断过程中出现错误:', error.message);
+    console.log('\n📋 建议的解决步骤:');
+    console.log('1. 检查LeanCloud控制台的安全域名设置');
+    console.log('2. 确认数据表权限配置正确');
+    console.log('3. 验证AppId和AppKey是否正确');
+    console.log('4. 检查网络连接和防火墙设置');
+  }
+};
+
+/**
+ * 快速修复403权限问题
+ */
+export const quickFix403 = async (): Promise<void> => {
+  console.log('🔧 开始快速修复403权限问题...');
+  
+  try {
+    // 1. 重新初始化LeanCloud
+    console.log('1. 重新初始化LeanCloud连接...');
+    const { initLeanCloud } = await import('../services/leancloud');
+    initLeanCloud();
+    console.log('   ✅ LeanCloud重新初始化完成');
+
+    // 2. 检查并创建缺失的数据表
+    console.log('2. 检查数据表结构...');
+    await quickFixMissingTables();
+    console.log('   ✅ 数据表检查完成');
+
+    // 3. 清除可能存在的缓存问题
+    console.log('3. 清除缓存数据...');
+    const { clearAllCaches } = await import('../services/dataCache');
+    clearAllCaches();
+    console.log('   ✅ 缓存已清除');
+
+    // 4. 测试修复结果
+    console.log('4. 测试修复结果...');
+    try {
+      const testQuery = new AV.Query('Game');
+      testQuery.limit(1);
+      await testQuery.find();
+      console.log('   ✅ 数据表访问测试通过');
+    } catch (error: any) {
+      if (error.code === 403) {
+        throw new Error('权限问题依然存在，需要手动配置LeanCloud控制台权限');
+      } else if (error.code === 404) {
+        console.log('   ⚠️ 数据表仍不存在，但这不影响基本功能');
+      }
+    }
+
+    console.log('✅ 快速修复完成！');
+    console.log('💡 建议刷新页面以确保所有更改生效');
+    
+  } catch (error: any) {
+    console.error('❌ 快速修复失败:', error.message);
+    console.log('\n📋 请尝试手动解决:');
+    console.log('1. 访问LeanCloud控制台检查权限设置');
+    console.log('2. 确认域名白名单配置');
+    console.log('3. 联系技术支持获取帮助');
+    throw error;
+  }
+};
+
 // 暴露到全局作用域，方便开发调试
 declare global {
   interface Window {
@@ -633,6 +788,8 @@ declare global {
     migrateFavoriteData: typeof migrateFavoriteData;
     checkFavoriteDataConsistency: typeof checkFavoriteDataConsistency;
     fixFavoriteDataConsistency: typeof fixFavoriteDataConsistency;
+    diagnose403Error: typeof diagnose403Error;
+    quickFix403: typeof quickFix403;
   }
 }
 
@@ -642,4 +799,6 @@ if (typeof window !== 'undefined') {
   window.migrateFavoriteData = migrateFavoriteData;
   window.checkFavoriteDataConsistency = checkFavoriteDataConsistency;
   window.fixFavoriteDataConsistency = fixFavoriteDataConsistency;
+  window.diagnose403Error = diagnose403Error;
+  window.quickFix403 = quickFix403;
 } 
