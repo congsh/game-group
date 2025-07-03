@@ -21,13 +21,19 @@ export const createWeekendTeam = async (teamForm: TeamForm, leaderId: string): P
     const game = await gameQuery.get(teamForm.gameId);
     const maxMembers = game.get('maxPlayers') || 4;
 
+    // 获取当前用户昵称
+    const currentUser = AV.User.current();
+    const leaderName = currentUser?.get('username') || `用户${leaderId.slice(-6)}`;
+
     const team = new AV.Object('WeekendTeam');
     team.set('game', teamForm.gameId);
     team.set('eventDate', teamForm.eventDate);
     team.set('startTime', teamForm.startTime);
     team.set('endTime', teamForm.endTime);
     team.set('leader', leaderId);
+    team.set('leaderName', leaderName); // 保存队长昵称
     team.set('members', [leaderId]); // 队长自动加入成员列表
+    team.set('memberNames', [leaderName]); // 保存成员昵称列表
     team.set('maxMembers', maxMembers);
     team.set('status', 'open');
 
@@ -125,6 +131,15 @@ export const getWeekendTeams = async (
       const memberIds = team.get('members') || [];
       const game = gameMap.get(gameId);
 
+      // 优先使用保存的昵称，如果没有则使用查询结果或占位符
+      const savedLeaderName = team.get('leaderName');
+      const savedMemberNames = team.get('memberNames') || [];
+      
+      const leaderName = savedLeaderName || userMap.get(leaderId) || `用户${leaderId.slice(-6)}`;
+      const memberNames = memberIds.map((id: string, index: number) => {
+        return savedMemberNames[index] || userMap.get(id) || `用户${id.slice(-6)}`;
+      });
+
       return {
         objectId: team.id || '',
         game: gameId,
@@ -138,8 +153,8 @@ export const getWeekendTeams = async (
         createdAt: team.get('createdAt'),
         updatedAt: team.get('updatedAt'),
         gameName: game?.name || '未知游戏',
-        leaderName: userMap.get(leaderId) || '未知用户',
-        memberNames: memberIds.map((id: string) => userMap.get(id) || '未知用户'),
+        leaderName: leaderName,
+        memberNames: memberNames,
         isCurrentUserMember: false, // 这个会在组件中计算
         isCurrentUserLeader: false, // 这个会在组件中计算
       };
@@ -202,6 +217,15 @@ export const getWeekendTeamById = async (teamId: string): Promise<TeamDetails> =
 
     const userMap = new Map(users.map(user => [user.objectId, user.nickname]));
 
+    // 优先使用保存的昵称
+    const savedLeaderName = team.get('leaderName');
+    const savedMemberNames = team.get('memberNames') || [];
+    
+    const leaderName = savedLeaderName || userMap.get(leaderId) || `用户${leaderId.slice(-6)}`;
+    const memberNames = memberIds.map((id: string, index: number) => {
+      return savedMemberNames[index] || userMap.get(id) || `用户${id.slice(-6)}`;
+    });
+
     return {
       objectId: team.id || '',
       game: gameId,
@@ -215,8 +239,8 @@ export const getWeekendTeamById = async (teamId: string): Promise<TeamDetails> =
       createdAt: team.get('createdAt'),
       updatedAt: team.get('updatedAt'),
       gameName: game?.name || '未知游戏',
-      leaderName: userMap.get(leaderId) || '未知用户',
-      memberNames: memberIds.map((id: string) => userMap.get(id) || '未知用户'),
+      leaderName: leaderName,
+      memberNames: memberNames,
       isCurrentUserMember: false,
       isCurrentUserLeader: false,
     };
@@ -234,10 +258,15 @@ export const getWeekendTeamById = async (teamId: string): Promise<TeamDetails> =
  */
 export const joinWeekendTeam = async (teamId: string, userId: string): Promise<WeekendTeam> => {
   try {
+    // 获取当前用户昵称
+    const currentUser = AV.User.current();
+    const userName = currentUser?.get('username') || `用户${userId.slice(-6)}`;
+    
     const team = AV.Object.createWithoutData('WeekendTeam', teamId);
     
     // 原子操作：添加成员
     team.addUnique('members', userId);
+    team.addUnique('memberNames', userName);
     
     const result = await team.save();
 
@@ -273,23 +302,52 @@ export const joinWeekendTeam = async (teamId: string, userId: string): Promise<W
  * 离开组队
  * @param teamId 组队ID
  * @param userId 用户ID
- * @returns 更新后的组队记录
+ * @returns 更新后的组队记录，如果是队长离开则返回null（表示队伍已删除）
  */
-export const leaveWeekendTeam = async (teamId: string, userId: string): Promise<WeekendTeam> => {
+export const leaveWeekendTeam = async (teamId: string, userId: string): Promise<WeekendTeam | null> => {
   try {
+    // 先获取组队信息
+    const query = new AV.Query('WeekendTeam');
+    const teamInfo = await query.get(teamId);
+    const leader = teamInfo.get('leader');
+    const members = teamInfo.get('members') || [];
+    const memberNames = teamInfo.get('memberNames') || [];
+    
+    // 检查是否是队长离开
+    if (leader === userId) {
+      // 队长离开，直接删除整个队伍
+      await teamInfo.destroy();
+      return null; // 返回null表示队伍已删除
+    }
+    
+    // 普通成员离开的逻辑
+    // 找到用户在成员列表中的索引
+    const userIndex = members.indexOf(userId);
+    let userNameToRemove = '';
+    if (userIndex !== -1 && userIndex < memberNames.length) {
+      userNameToRemove = memberNames[userIndex];
+    } else {
+      // 如果找不到对应昵称，使用当前用户的昵称或占位符
+      const currentUser = AV.User.current();
+      userNameToRemove = currentUser?.get('username') || `用户${userId.slice(-6)}`;
+    }
+    
     const team = AV.Object.createWithoutData('WeekendTeam', teamId);
     
-    // 原子操作：移除成员
+    // 原子操作：移除成员和对应昵称
     team.remove('members', userId);
+    if (userNameToRemove) {
+      team.remove('memberNames', userNameToRemove);
+    }
     
     const result = await team.save();
 
     // 检查是否需要更新状态
-    const members = result.get('members') || [];
+    const updatedMembers = result.get('members') || [];
     const maxMembers = result.get('maxMembers');
     const status = result.get('status');
     
-    if (status === 'full' && members.length < maxMembers) {
+    if (status === 'full' && updatedMembers.length < maxMembers) {
       team.set('status', 'open');
       await team.save();
     }
@@ -548,27 +606,20 @@ const getGamesByIds = async (gameIds: string[]): Promise<Game[]> => {
 
 /**
  * 辅助函数：根据ID列表获取用户信息
+ * 由于LeanCloud _User表的权限限制，直接返回用户昵称占位符
  */
 const getUsersByIds = async (userIds: string[]): Promise<Array<{ objectId: string; nickname: string }>> => {
   if (userIds.length === 0) return [];
   
-  try {
-    const query = new AV.Query('_User');
-    query.containedIn('objectId', userIds);
-    query.limit(1000);
-    const users = await query.find();
-    
-    return users.map(user => ({
-      objectId: user.id || '',
-      nickname: user.get('nickname') || '未知用户'
-    }));
-  } catch (error: any) {
-    console.error('获取用户信息失败:', error);
-    
-    // 对于查询不到的用户，返回占位符信息
-    return userIds.map(userId => ({
+  // 由于LeanCloud的_User表权限限制（403 Forbidden），
+  // 我们无法直接查询其他用户信息
+  // 返回基于用户ID的友好昵称，避免显示"未知用户"
+  return userIds.map(userId => {
+    // 生成基于用户ID的友好昵称
+    const shortId = userId.slice(-6); // 取用户ID的后6位
+    return {
       objectId: userId,
-      nickname: '未知用户'
-    }));
-  }
+      nickname: `用户${shortId}`
+    };
+  });
 }; 

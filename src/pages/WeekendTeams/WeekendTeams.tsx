@@ -14,7 +14,8 @@ import {
   Spin,
   Alert,
   message,
-  Select
+  Select,
+  Modal
 } from 'antd';
 import {
   TeamOutlined,
@@ -85,11 +86,37 @@ const WeekendTeams: React.FC = () => {
    * 处理离开队伍
    */
   const handleLeaveTeam = async (team: TeamDetails) => {
-    try {
-      await leaveTeam(team.objectId);
-      message.success('已离开队伍');
-    } catch (error) {
-      message.error('离开队伍失败，请重试');
+    // 如果用户是队长，提示队伍将被删除
+    if (team.isCurrentUserLeader) {
+      Modal.confirm({
+        title: '确认离开队伍',
+        content: (
+          <div>
+            <p>⚠️ 您是队长，离开队伍后整个队伍将被删除。</p>
+            <p>所有队员都将被自动移除。</p>
+            <p>确定要继续吗？</p>
+          </div>
+        ),
+        okText: '确定删除',
+        cancelText: '取消',
+        okType: 'danger',
+        onOk: async () => {
+          try {
+            await leaveTeam(team.objectId);
+            message.success('队伍已删除');
+          } catch (error) {
+            message.error('操作失败，请重试');
+          }
+        }
+      });
+    } else {
+      // 普通成员离开
+      try {
+        await leaveTeam(team.objectId);
+        message.success('已离开队伍');
+      } catch (error) {
+        message.error('离开队伍失败，请重试');
+      }
     }
   };
 
@@ -261,8 +288,10 @@ const WeekendTeams: React.FC = () => {
                       key="leave" 
                       onClick={() => handleLeaveTeam(team)}
                       loading={joining}
+                      type={team.isCurrentUserLeader ? "default" : "default"}
+                      danger={team.isCurrentUserLeader}
                     >
-                      离开队伍
+                      {team.isCurrentUserLeader ? '解散队伍' : '离开队伍'}
                     </Button>
                   ) : (
                     <Button key="full" disabled>

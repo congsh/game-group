@@ -231,6 +231,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
 
   /**
    * 离开组队
+   * 如果是队长离开，队伍将被删除
    */
   leaveTeam: async (teamId: string) => {
     const { user } = useAuthStore.getState();
@@ -242,11 +243,25 @@ export const useTeamStore = create<TeamState>((set, get) => ({
     set({ joining: true, error: null });
 
     try {
-      await leaveWeekendTeam(teamId, user.objectId);
+      const result = await leaveWeekendTeam(teamId, user.objectId);
       
       // 更新本地状态
       const { teams, selectedTeam } = get();
       
+      // 如果返回null，说明队长离开了，队伍被删除
+      if (result === null) {
+        // 从列表中移除队伍
+        const filteredTeams = teams.filter(team => team.objectId !== teamId);
+        set({ 
+          teams: filteredTeams,
+          total: get().total - 1,
+          selectedTeam: selectedTeam?.objectId === teamId ? null : selectedTeam,
+          joining: false 
+        });
+        return;
+      }
+      
+      // 普通成员离开的处理逻辑
       const updatedTeams = teams.map(team => {
         if (team.objectId === teamId) {
           const newMembers = team.members.filter(id => id !== user.objectId);

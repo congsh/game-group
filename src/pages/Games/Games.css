@@ -1,241 +1,546 @@
-/* 游戏库页面样式 */
+/* 游戏库页面样式 - 简洁报表风格 */
 
-.games-page {
+.games-page-modern {
+  min-height: 100vh;
+  background: #f5f5f5;
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-/* 页面头部 */
-.games-header {
+/* 统计面板 */
+.games-stats-panel {
   margin-bottom: 24px;
-  text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: none;
+  background: white;
+  overflow: hidden;
 }
 
-.games-header h2 {
+.games-stats-panel .ant-card-body {
+  padding: 24px;
+  background: white;
+}
+
+.games-stats-panel .ant-statistic-title {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.65);
   margin-bottom: 8px;
-  color: #1890ff;
+  font-size: 14px;
 }
 
-/* 筛选区域 */
-.games-filters {
+.games-stats-panel .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* 筛选面板优化 */
+.games-filters-modern {
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: none;
+  overflow: hidden;
+  background: white;
 }
 
-.games-filters .ant-card-body {
-  padding: 16px;
+.games-filters-modern .ant-card-body {
+  padding: 0;
 }
 
-/* 游戏卡片 */
-.game-card {
-  height: 100%;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.game-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-.game-card .ant-card-body {
-  padding: 16px;
-}
-
-.game-card .ant-card-actions {
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
   background: #fafafa;
-  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  color: rgba(0, 0, 0, 0.85);
 }
 
-.game-card .ant-card-actions li {
-  margin: 8px 0;
-}
-
-/* 游戏标题 */
-.game-title {
+.filters-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.game-title span {
+  gap: 8px;
   font-weight: 600;
   font-size: 16px;
-  color: #262626;
-  flex: 1;
-  margin-right: 8px;
 }
 
-/* 游戏描述 */
-.game-description {
+.clear-filters-btn {
+  color: #1890ff !important;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.clear-filters-btn:hover {
+  background: #f0f8ff !important;
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+.filters-content {
+  padding: 24px;
+  background: white;
+}
+
+.filter-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.game-players {
+.filter-item label {
+  font-weight: 600;
+  color: #262626;
+  font-size: 14px;
+}
+
+.add-game-btn {
+  background: #1890ff !important;
+  border: none !important;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.add-game-btn:hover {
+  background: #40a9ff !important;
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3) !important;
+}
+
+/* 游戏网格 */
+.games-grid {
+  margin-bottom: 40px;
+}
+
+/* 简洁游戏卡片 */
+.game-card-modern {
+  height: 100%;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  background: white;
+  position: relative;
+}
+
+.game-card-modern:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.game-card-header {
+  position: relative;
+  padding: 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.game-card-avatar {
+  position: relative;
+}
+
+.game-card-hot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.game-card-modern .ant-card-body {
+  padding: 16px;
+}
+
+.game-card-modern .ant-card-actions {
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  padding: 8px 16px;
+}
+
+.game-card-modern .ant-card-actions li {
+  margin: 0;
+  width: 25%;
+  text-align: center;
+}
+
+.game-action-btn {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 6px;
+  height: 36px;
+  width: 100%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.game-action-btn:hover {
+  background: #e6f7ff !important;
+}
+
+.game-action-btn.ant-btn-dangerous:hover {
+  background: #fff2f0 !important;
+}
+
+/* 游戏标题和描述 */
+.game-title-modern {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.game-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #262626;
+  line-height: 1.3;
+}
+
+.game-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.game-tag {
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  padding: 2px 6px !important;
+  line-height: 1.4 !important;
+  margin: 0 !important;
+  font-weight: 400;
+  border: 1px solid #d9d9d9;
+}
+
+.game-description-modern {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.game-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.game-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.game-desc-modern {
+  margin-top: 8px;
+}
+
+.game-desc-modern .ant-typography {
+  margin-bottom: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 分页优化 */
+.games-pagination-modern {
+  margin-top: 32px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.games-pagination-modern .ant-pagination {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.game-type {
+/* 简洁的空状态设计 */
+.games-empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 400px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
-.game-desc {
-  margin-top: 8px;
+.empty-illustration {
+  margin-bottom: 32px;
+  width: 120px;
+  height: 120px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.game-desc .ant-typography {
-  margin-bottom: 0;
-  color: #8c8c8c;
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  background: #1890ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: white;
+  margin: 0 auto;
+}
+
+.empty-content {
+  max-width: 500px;
+}
+
+.empty-title {
+  color: rgba(0, 0, 0, 0.85) !important;
+  margin-bottom: 16px !important;
+  font-weight: 600;
+}
+
+.empty-subtitle {
   font-size: 14px;
-  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1.6;
+  margin-bottom: 24px;
+  display: block;
 }
 
-/* 分页 */
-.games-pagination {
+.empty-tip {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 16px 0 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+}
+
+.tip-icon {
+  font-size: 20px;
+  margin-top: 2px;
+}
+
+.tip-content {
+  flex: 1;
+}
+
+.empty-actions {
   margin-top: 32px;
-  text-align: center;
-  padding: 16px 0;
 }
 
-/* 空状态 */
-.games-empty {
-  margin: 48px 0;
-  text-align: center;
+.action-space {
+  width: 100%;
+}
+
+.primary-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.secondary-action {
+  display: flex;
+  justify-content: center;
+}
+
+.action-btn {
+  border-radius: 6px !important;
+  height: 40px !important;
+  padding: 0 16px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.action-btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.primary-btn {
+  background: #1890ff !important;
+  border: none !important;
+}
+
+.sample-btn {
+  border: 1px solid #52c41a !important;
+  color: #52c41a !important;
+}
+
+.sample-btn:hover {
+  background: #52c41a !important;
+  color: white !important;
+}
+
+/* 表单对话框优化 */
+.game-form-modal .ant-modal-header {
+  border-radius: 8px 8px 0 0;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.game-form-modal .ant-modal-title {
+  color: rgba(0, 0, 0, 0.85) !important;
+  font-weight: 600;
+}
+
+.game-form-modal .ant-modal-content {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.game-form-modal .ant-form-item-label > label {
+  font-weight: 600;
+  color: #262626;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .games-page {
+  .games-page-modern {
     padding: 16px;
   }
   
-  .games-header {
-    margin-bottom: 16px;
+  .games-stats-panel .ant-card-body {
+    padding: 20px 16px;
   }
   
-  .games-filters {
-    margin-bottom: 16px;
+  .filters-header {
+    padding: 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
   }
   
-  .games-filters .ant-card-body {
+  .filters-content {
+    padding: 16px;
+  }
+  
+  .game-card-header {
     padding: 12px;
   }
   
-  .game-card .ant-card-body {
+  .game-card-modern .ant-card-body {
     padding: 12px;
   }
   
-  .game-title span {
-    font-size: 14px;
+  .game-card-modern .ant-card-actions {
+    padding: 6px;
   }
   
-  .games-pagination {
-    margin-top: 24px;
+  .empty-illustration {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .empty-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+  
+  .primary-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .action-btn {
+    width: 100% !important;
   }
 }
 
 @media (max-width: 576px) {
-  .games-page {
+  .games-page-modern {
     padding: 12px;
   }
   
-  .games-filters .ant-row {
-    gap: 8px 0 !important;
+  .games-grid .ant-row {
+    gap: 16px 0 !important;
   }
   
-  .game-card {
-    margin-bottom: 12px;
+  .game-card-modern {
+    margin-bottom: 16px;
   }
   
-  .games-pagination .ant-pagination {
-    font-size: 12px;
+  .filters-content .ant-row {
+    gap: 16px 0 !important;
   }
   
-  .games-pagination .ant-pagination-options {
-    display: none;
+  .filter-item {
+    margin-bottom: 16px;
+  }
+  
+  .empty-content {
+    padding: 0 16px;
+  }
+  
+  .empty-tip {
+    padding: 12px 16px;
+    margin: 16px 0 24px;
   }
 }
 
 /* 深色模式支持 */
 @media (prefers-color-scheme: dark) {
-  .games-filters {
-    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.08);
+  .games-page-modern {
+    background: #141414;
   }
   
-  .game-card {
-    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.08);
+  .games-stats-panel,
+  .games-filters-modern,
+  .game-card-modern,
+  .games-empty-state {
+    background: #1f1f1f;
+    border-color: #303030;
   }
   
-  .game-card:hover {
-    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
-  }
-}
-
-/* 加载状态 */
-.games-loading {
-  text-align: center;
-  padding: 48px 0;
-}
-
-/* 筛选按钮组 */
-.games-filters .ant-space {
-  width: 100%;
-}
-
-@media (max-width: 768px) {
-  .games-filters .ant-space {
-    flex-direction: column;
-    width: 100%;
+  .filters-header,
+  .game-card-header {
+    background: #262626;
+    border-color: #303030;
   }
   
-  .games-filters .ant-space .ant-btn {
-    width: 100%;
+  .filters-content {
+    background: #1f1f1f;
+    color: white;
+  }
+  
+  .filter-item label,
+  .game-name,
+  .empty-title {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+  
+  .empty-subtitle {
+    color: rgba(255, 255, 255, 0.45);
   }
 }
 
-/* 游戏表单对话框 */
-.ant-modal .ant-form-item-label > label {
+/* 加载动画优化 */
+.ant-spin-container {
+  min-height: 400px;
+}
+
+.ant-spin-tip {
+  color: #1890ff;
   font-weight: 600;
 }
 
-/* 标签样式优化 */
-.game-title .ant-tag {
-  margin-left: 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  padding: 2px 8px;
-  line-height: 1.4;
-}
-
-.game-type .ant-tag {
-  border-radius: 12px;
-  font-size: 12px;
-  padding: 2px 8px;
-  line-height: 1.4;
-  margin: 0;
-}
-
-/* 操作按钮优化 */
-.game-card .ant-card-actions .ant-btn {
-  border: none;
-  box-shadow: none;
-  height: auto;
-  padding: 4px 8px;
-}
-
-.game-card .ant-card-actions .ant-btn:hover {
-  background: #e6f7ff;
-}
-
-.game-card .ant-card-actions .ant-btn.ant-btn-dangerous:hover {
-  background: #fff2f0;
+/* 热度指示器样式 */
+.ant-badge-count {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid white;
+  font-weight: 600;
 } 

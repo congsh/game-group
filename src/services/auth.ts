@@ -98,6 +98,7 @@ export const isLoggedIn = (): boolean => {
 
 /**
  * 更新用户收藏游戏列表
+ * 同时维护_User表的favoriteGames字段和UserFavorite表的记录
  */
 export const updateFavoriteGames = async (gameIds: string[]): Promise<void> => {
   try {
@@ -106,8 +107,80 @@ export const updateFavoriteGames = async (gameIds: string[]): Promise<void> => {
       throw new Error('用户未登录');
     }
     
+    const userId = currentUser.id;
+    const oldFavoriteGames = currentUser.get('favoriteGames') || [];
+    
+    // 更新_User表的favoriteGames字段
     currentUser.set('favoriteGames', gameIds);
     await currentUser.save();
+    
+    // 同步更新UserFavorite表
+    try {
+      // 找出新增的收藏
+      const addedGames: string[] = gameIds.filter((gameId: string) => !oldFavoriteGames.includes(gameId));
+      // 找出取消的收藏
+      const removedGames: string[] = oldFavoriteGames.filter((gameId: string) => !gameIds.includes(gameId));
+      
+      // 创建新的收藏记录
+      const UserFavoriteClass = AV.Object.extend('UserFavorite');
+      for (const gameId of addedGames) {
+        const userFavorite = new UserFavoriteClass();
+        userFavorite.set('user', userId);
+        userFavorite.set('game', gameId);
+        await userFavorite.save();
+      }
+      
+      // 删除取消的收藏记录
+      if (removedGames.length > 0) {
+        const query = new AV.Query('UserFavorite');
+        query.equalTo('user', userId);
+        query.containedIn('game', removedGames);
+        const toDelete = await query.find();
+        if (toDelete.length > 0) {
+          for (const item of toDelete) {
+            await item.destroy();
+          }
+        }
+      }
+    } catch (userFavoriteError: any) {
+      // 如果UserFavorite表不存在，尝试创建表
+      if (userFavoriteError.code === 404) {
+        console.log('UserFavorite表不存在，尝试创建...');
+        try {
+          // 导入初始化函数
+          const { initUserFavoriteTable } = await import('../utils/initData');
+          await initUserFavoriteTable();
+          
+                     // 重新执行UserFavorite表的操作
+           const addedGames: string[] = gameIds.filter((gameId: string) => !oldFavoriteGames.includes(gameId));
+           const removedGames: string[] = oldFavoriteGames.filter((gameId: string) => !gameIds.includes(gameId));
+          
+                     const UserFavoriteClass = AV.Object.extend('UserFavorite');
+           for (const gameId of addedGames) {
+             const userFavorite = new UserFavoriteClass();
+             userFavorite.set('user', userId);
+             userFavorite.set('game', gameId);
+             await userFavorite.save();
+           }
+           
+           if (removedGames.length > 0) {
+             const query = new AV.Query('UserFavorite');
+             query.equalTo('user', userId);
+             query.containedIn('game', removedGames);
+             const toDelete = await query.find();
+             if (toDelete.length > 0) {
+               for (const item of toDelete) {
+                 await item.destroy();
+               }
+             }
+           }
+        } catch (initError) {
+          console.warn('UserFavorite表创建失败，仅更新_User表:', initError);
+        }
+      } else {
+        console.warn('更新UserFavorite表失败，但_User表已更新:', userFavoriteError);
+      }
+    }
   } catch (error: any) {
     throw new Error(`更新收藏失败: ${error.message}`);
   }

@@ -1,5 +1,6 @@
 /**
  * 游戏库页面
+ * 优化版：现代化界面设计和用户体验
  */
 
 import React, { useEffect, useState } from 'react';
@@ -21,7 +22,11 @@ import {
   Typography,
   Tag,
   Tooltip,
-  Dropdown
+  Dropdown,
+  Avatar,
+  Progress,
+  Badge,
+  Statistic
 } from 'antd';
 import {
   SearchOutlined,
@@ -34,7 +39,15 @@ import {
   FilterOutlined,
   DownOutlined,
   DatabaseOutlined,
-  RocketOutlined
+  RocketOutlined,
+  LikeFilled,
+  StarFilled,
+  ThunderboltFilled,
+  UserOutlined,
+  TeamOutlined,
+  ClearOutlined,
+  SortAscendingOutlined,
+  AppstoreAddOutlined
 } from '@ant-design/icons';
 import { useGameStore } from '../../store/games';
 import { useAuthStore } from '../../store/auth';
@@ -46,11 +59,40 @@ import './Games.css';
 
 const { Search } = Input;
 const { Option } = Select;
-const { Text } = Typography;
+const { Text, Title } = Typography;
 const { Meta } = Card;
 
 /**
- * 游戏卡片组件
+ * 热度指示器组件
+ */
+const HotScore: React.FC<{ score: number }> = ({ score }) => {
+  const getHotLevel = (score: number) => {
+    if (score >= 4) return { level: 'hot', color: '#ff4d4f', icon: '🔥' };
+    if (score >= 3) return { level: 'warm', color: '#fa8c16', icon: '⭐' };
+    if (score >= 2) return { level: 'normal', color: '#52c41a', icon: '👍' };
+    return { level: 'cold', color: '#8c8c8c', icon: '💤' };
+  };
+  
+  const hot = getHotLevel(score);
+  
+  return (
+    <Tooltip title={`热度分数: ${score.toFixed(1)}`}>
+      <Badge 
+        count={hot.icon} 
+        style={{ 
+          backgroundColor: hot.color,
+          fontSize: '10px',
+          minWidth: '20px',
+          height: '20px',
+          lineHeight: '20px'
+        }}
+      />
+    </Tooltip>
+  );
+};
+
+/**
+ * 游戏卡片组件 - 优化版
  */
 const GameCard: React.FC<{
   game: Game;
@@ -61,23 +103,47 @@ const GameCard: React.FC<{
   onLike: (gameId: string) => void;
   canEdit: boolean;
 }> = ({ game, isFavorite, onEdit, onDelete, onToggleFavorite, onLike, canEdit }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  
   return (
     <Card
-      className="game-card"
+      className={`game-card-modern ${isHovered ? 'hovered' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      cover={
+        <div className="game-card-header">
+          <div className="game-card-avatar">
+            <Avatar 
+              size={48} 
+              icon={<RocketOutlined />}
+              style={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+              }}
+            />
+          </div>
+          <div className="game-card-hot">
+            <HotScore score={game.hotScore || 0} />
+          </div>
+        </div>
+      }
       actions={[
         <Tooltip title={isFavorite ? '取消收藏' : '添加收藏'} key="favorite">
           <Button
             type="text"
             icon={isFavorite ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
             onClick={() => onToggleFavorite(game.objectId)}
+            className="game-action-btn"
           />
         </Tooltip>,
         <Tooltip title="点赞" key="like">
           <Button
             type="text"
             onClick={() => onLike(game.objectId)}
+            className="game-action-btn"
           >
-            👍 {game.likeCount}
+            <LikeFilled style={{ color: '#52c41a', marginRight: 4 }} />
+            {game.likeCount}
           </Button>
         </Tooltip>,
         ...(canEdit ? [
@@ -86,6 +152,7 @@ const GameCard: React.FC<{
               type="text"
               icon={<EditOutlined />}
               onClick={() => onEdit(game)}
+              className="game-action-btn"
             />
           </Tooltip>,
           <Tooltip title="删除" key="delete">
@@ -94,6 +161,7 @@ const GameCard: React.FC<{
               danger
               icon={<DeleteOutlined />}
               onClick={() => onDelete(game)}
+              className="game-action-btn"
             />
           </Tooltip>
         ] : [])
@@ -101,28 +169,43 @@ const GameCard: React.FC<{
     >
       <Meta
         title={
-          <div className="game-title">
-            <span>{game.name}</span>
-            {game.platform && <Tag color="blue">{game.platform}</Tag>}
+          <div className="game-title-modern">
+            <Text strong className="game-name">{game.name}</Text>
+            <div className="game-tags">
+              {game.platform && (
+                <Tag color="blue" className="game-tag">
+                  {game.platform}
+                </Tag>
+              )}
+              {game.type && (
+                <Tag color="green" className="game-tag">
+                  {game.type}
+                </Tag>
+              )}
+            </div>
           </div>
         }
         description={
-          <div className="game-description">
-            <div className="game-players">
-              <Text type="secondary">
-                {game.minPlayers === game.maxPlayers 
-                  ? `${game.minPlayers} 人` 
-                  : `${game.minPlayers}-${game.maxPlayers} 人`}
-              </Text>
-            </div>
-            {game.type && (
-              <div className="game-type">
-                <Tag color="green">{game.type}</Tag>
+          <div className="game-description-modern">
+            <div className="game-stats">
+              <div className="game-stat">
+                <UserOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+                <Text type="secondary">
+                  {game.minPlayers === game.maxPlayers 
+                    ? `${game.minPlayers} 人` 
+                    : `${game.minPlayers}-${game.maxPlayers} 人`}
+                </Text>
               </div>
-            )}
+              {game.favoriteCount !== undefined && (
+                <div className="game-stat">
+                  <HeartFilled style={{ marginRight: 4, color: '#ff4d4f' }} />
+                  <Text type="secondary">{game.favoriteCount}</Text>
+                </div>
+              )}
+            </div>
             {game.description && (
-              <div className="game-desc">
-                <Text ellipsis={{ tooltip: game.description }}>
+              <div className="game-desc-modern">
+                <Text ellipsis={{ tooltip: game.description }} type="secondary">
                   {game.description}
                 </Text>
               </div>
@@ -135,7 +218,7 @@ const GameCard: React.FC<{
 };
 
 /**
- * 游戏表单组件
+ * 游戏表单组件 - 优化版
  */
 const GameForm: React.FC<{
   visible: boolean;
@@ -172,12 +255,18 @@ const GameForm: React.FC<{
 
   return (
     <Modal
-      title={game ? '编辑游戏' : '添加游戏'}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <RocketOutlined style={{ color: '#1890ff' }} />
+          {game ? '编辑游戏' : '添加游戏'}
+        </div>
+      }
       open={visible}
       onOk={handleSubmit}
       onCancel={onCancel}
       confirmLoading={loading}
       width={600}
+      className="game-form-modal"
     >
       <Form
         form={form}
@@ -195,7 +284,7 @@ const GameForm: React.FC<{
             { max: 100, message: '游戏名称不能超过100个字符' }
           ]}
         >
-          <Input placeholder="请输入游戏名称" />
+          <Input placeholder="请输入游戏名称" size="large" />
         </Form.Item>
 
         <Row gutter={16}>
@@ -208,7 +297,7 @@ const GameForm: React.FC<{
                 { type: 'number', min: 1, message: '最少人数不能小于1' }
               ]}
             >
-              <InputNumber min={1} max={100} style={{ width: '100%' }} />
+              <InputNumber min={1} max={100} style={{ width: '100%' }} size="large" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -220,7 +309,7 @@ const GameForm: React.FC<{
                 { type: 'number', min: 1, message: '最多人数不能小于1' }
               ]}
             >
-              <InputNumber min={1} max={100} style={{ width: '100%' }} />
+              <InputNumber min={1} max={100} style={{ width: '100%' }} size="large" />
             </Form.Item>
           </Col>
         </Row>
@@ -229,14 +318,14 @@ const GameForm: React.FC<{
           name="platform"
           label="游戏平台"
         >
-          <Input placeholder="如：PC、PS5、Switch 等" />
+          <Input placeholder="如：PC、PS5、Switch 等" size="large" />
         </Form.Item>
 
         <Form.Item
           name="type"
           label="游戏类型"
         >
-          <Input placeholder="如：策略、射击、角色扮演 等" />
+          <Input placeholder="如：策略、射击、角色扮演 等" size="large" />
         </Form.Item>
 
         <Form.Item
@@ -244,14 +333,98 @@ const GameForm: React.FC<{
           label="游戏描述"
         >
           <Input.TextArea
-            rows={3}
+            rows={4}
             placeholder="请描述游戏的特色、玩法等..."
             maxLength={500}
             showCount
+            size="large"
           />
         </Form.Item>
       </Form>
     </Modal>
+  );
+};
+
+/**
+ * 精美的空状态组件
+ */
+const EmptyState: React.FC<{
+  onAddGame: () => void;
+  onBatchImport: () => void;
+  onInitSample: () => void;
+  initLoading: boolean;
+}> = ({ onAddGame, onBatchImport, onInitSample, initLoading }) => {
+  return (
+    <div className="games-empty-state">
+      <div className="empty-illustration">
+        <div className="empty-icon">
+          <RocketOutlined />
+        </div>
+        <div className="empty-planets">
+          <div className="planet planet-1"></div>
+          <div className="planet planet-2"></div>
+          <div className="planet planet-3"></div>
+        </div>
+      </div>
+      
+      <div className="empty-content">
+        <Title level={3} className="empty-title">
+          探索游戏宇宙 🚀
+        </Title>
+        <Text className="empty-subtitle">
+          这里还没有游戏数据，让我们一起创建一个精彩的游戏库吧！
+        </Text>
+        
+        <div className="empty-tip">
+          <div className="tip-icon">💡</div>
+          <div className="tip-content">
+            <Text strong>首次使用提示：</Text>
+            <br />
+            <Text type="secondary">
+              控制台的404错误是正常的LeanCloud懒创建机制，点击下方按钮即可解决
+            </Text>
+          </div>
+        </div>
+        
+        <div className="empty-actions">
+          <Space direction="vertical" size="large" className="action-space">
+            <div className="primary-actions">
+              <Button 
+                type="primary" 
+                size="large"
+                onClick={onAddGame}
+                icon={<PlusOutlined />}
+                className="action-btn primary-btn"
+              >
+                手动添加游戏
+              </Button>
+              <Button 
+                type="default"
+                size="large"
+                onClick={onBatchImport}
+                icon={<DatabaseOutlined />}
+                className="action-btn"
+              >
+                批量导入游戏
+              </Button>
+            </div>
+            
+            <div className="secondary-action">
+              <Button 
+                onClick={onInitSample}
+                loading={initLoading}
+                icon={<ImportOutlined />}
+                size="large"
+                className="action-btn sample-btn"
+                ghost
+              >
+                {initLoading ? '正在加载示例数据...' : '🎮 加载7个精选游戏'}
+              </Button>
+            </div>
+          </Space>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -467,129 +640,196 @@ export const Games: React.FC = () => {
   };
 
   return (
-    <div className="games-page">
+    <div className="games-page-modern">
       <PageHeader
         title="游戏库"
         subtitle="发现和管理你喜欢的游戏"
         icon={<RocketOutlined />}
       />
 
-      {/* 搜索和筛选 */}
-      <Card className="games-filters">
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={8}>
-            <Search
-              placeholder="搜索游戏名称..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onSearch={handleSearch}
-              enterButton={<SearchOutlined />}
-              allowClear
-            />
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Select
-              placeholder="游戏平台"
-              style={{ width: '100%' }}
-              value={filters.platform}
-              onChange={(value) => handleFilterChange('platform', value)}
-              allowClear
-            >
-              {platforms.map(platform => (
-                <Option key={platform} value={platform}>{platform}</Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Select
-              placeholder="游戏类型"
-              style={{ width: '100%' }}
-              value={filters.type}
-              onChange={(value) => handleFilterChange('type', value)}
-              allowClear
-            >
-              {types.map(type => (
-                <Option key={type} value={type}>{type}</Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Select
-              placeholder="排序方式"
-              style={{ width: '100%' }}
-              value={filters.sortBy ? `${filters.sortBy}:${filters.sortOrder || 'desc'}` : undefined}
-              onChange={handleSortChange}
-              allowClear
-            >
-              <Option value="hotScore:desc">🔥 综合热度</Option>
-              <Option value="favoriteCount:desc">❤️ 最多收藏</Option>
-              <Option value="likeCount:desc">👍 最多点赞</Option>
-              <Option value="createdAt:desc">🆕 最新添加</Option>
-              <Option value="name:asc">🔤 名称 A-Z</Option>
-              <Option value="name:desc">🔤 名称 Z-A</Option>
-              <Option value="favoriteCount:asc">收藏最少</Option>
-              <Option value="likeCount:asc">点赞最少</Option>
-              <Option value="createdAt:asc">最早添加</Option>
-            </Select>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Space>
-              <Button
-                icon={<FilterOutlined />}
-                onClick={handleClearFilters}
-              >
-                清除筛选
-              </Button>
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: 'single',
-                      label: '单个添加',
-                      icon: <PlusOutlined />,
-                      onClick: handleAddGame
-                    },
-                    {
-                      key: 'batch',
-                      label: '批量导入',
-                      icon: <DatabaseOutlined />,
-                      onClick: () => setBatchImportVisible(true)
-                    }
-                  ]
-                }}
-                trigger={['click']}
-              >
-                <Button type="primary">
-                  添加游戏 <DownOutlined />
-                </Button>
-              </Dropdown>
-            </Space>
-          </Col>
-        </Row>
+      {/* 统计面板 */}
+      {games.length > 0 && (
+        <Card className="games-stats-panel">
+          <Row gutter={[16, 16]}>
+            <Col xs={12} sm={6}>
+              <Statistic
+                title="游戏总数"
+                value={total}
+                prefix={<RocketOutlined style={{ color: '#1890ff' }} />}
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Col>
+            <Col xs={12} sm={6}>
+              <Statistic
+                title="我的收藏"
+                value={favoriteGames.length}
+                prefix={<HeartFilled style={{ color: '#ff4d4f' }} />}
+                valueStyle={{ color: '#ff4d4f' }}
+              />
+            </Col>
+            <Col xs={12} sm={6}>
+              <Statistic
+                title="游戏平台"
+                value={platforms.length}
+                prefix={<AppstoreAddOutlined style={{ color: '#52c41a' }} />}
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Col>
+            <Col xs={12} sm={6}>
+              <Statistic
+                title="游戏类型"
+                value={types.length}
+                prefix={<StarFilled style={{ color: '#faad14' }} />}
+                valueStyle={{ color: '#faad14' }}
+              />
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      {/* 搜索和筛选面板 */}
+      <Card className="games-filters-modern">
+        <div className="filters-header">
+          <div className="filters-title">
+            <FilterOutlined />
+            <span>筛选和排序</span>
+          </div>
+          <Button 
+            type="text" 
+            icon={<ClearOutlined />} 
+            onClick={handleClearFilters}
+            className="clear-filters-btn"
+          >
+            清除筛选
+          </Button>
+        </div>
+        
+        <div className="filters-content">
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={8}>
+              <div className="filter-item">
+                <label>搜索游戏</label>
+                <Search
+                  placeholder="搜索游戏名称..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onSearch={handleSearch}
+                  enterButton={<SearchOutlined />}
+                  allowClear
+                  size="large"
+                />
+              </div>
+            </Col>
+            <Col xs={12} sm={6} md={4}>
+              <div className="filter-item">
+                <label>游戏平台</label>
+                <Select
+                  placeholder="选择平台"
+                  style={{ width: '100%' }}
+                  value={filters.platform}
+                  onChange={(value) => handleFilterChange('platform', value)}
+                  allowClear
+                  size="large"
+                >
+                  {platforms.map(platform => (
+                    <Option key={platform} value={platform}>{platform}</Option>
+                  ))}
+                </Select>
+              </div>
+            </Col>
+            <Col xs={12} sm={6} md={4}>
+              <div className="filter-item">
+                <label>游戏类型</label>
+                <Select
+                  placeholder="选择类型"
+                  style={{ width: '100%' }}
+                  value={filters.type}
+                  onChange={(value) => handleFilterChange('type', value)}
+                  allowClear
+                  size="large"
+                >
+                  {types.map(type => (
+                    <Option key={type} value={type}>{type}</Option>
+                  ))}
+                </Select>
+              </div>
+            </Col>
+            <Col xs={12} sm={8} md={4}>
+              <div className="filter-item">
+                <label>排序方式</label>
+                <Select
+                  placeholder="选择排序"
+                  style={{ width: '100%' }}
+                  value={filters.sortBy ? `${filters.sortBy}:${filters.sortOrder || 'desc'}` : undefined}
+                  onChange={handleSortChange}
+                  allowClear
+                  size="large"
+                >
+                  <Option value="hotScore:desc">🔥 综合热度</Option>
+                  <Option value="favoriteCount:desc">❤️ 最多收藏</Option>
+                  <Option value="likeCount:desc">👍 最多点赞</Option>
+                  <Option value="createdAt:desc">🆕 最新添加</Option>
+                  <Option value="name:asc">🔤 名称 A-Z</Option>
+                  <Option value="name:desc">🔤 名称 Z-A</Option>
+                </Select>
+              </div>
+            </Col>
+            <Col xs={12} sm={8} md={4}>
+              <div className="filter-item">
+                <label>操作</label>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'single',
+                        label: '单个添加',
+                        icon: <PlusOutlined />,
+                        onClick: handleAddGame
+                      },
+                      {
+                        key: 'batch',
+                        label: '批量导入',
+                        icon: <DatabaseOutlined />,
+                        onClick: () => setBatchImportVisible(true)
+                      }
+                    ]
+                  }}
+                  trigger={['click']}
+                >
+                  <Button type="primary" size="large" className="add-game-btn">
+                    添加游戏 <DownOutlined />
+                  </Button>
+                </Dropdown>
+              </div>
+            </Col>
+          </Row>
+        </div>
       </Card>
 
       {/* 游戏列表 */}
-      <Spin spinning={loading || initLoading}>
+      <Spin spinning={loading || initLoading} tip={initLoading ? "正在加载示例数据..." : "加载中..."}>
         {games.length > 0 ? (
           <>
-            <Row gutter={[16, 16]}>
-              {games.map(game => (
-                <Col key={game.objectId} xs={24} sm={12} md={8} lg={6}>
-                  <GameCard
-                    game={game}
-                    isFavorite={isGameFavorite(game.objectId)}
-                    onEdit={handleEditGame}
-                    onDelete={handleDeleteGame}
-                    onToggleFavorite={handleToggleFavorite}
-                    onLike={handleLikeGame}
-                    canEdit={canEditGame(game)}
-                  />
-                </Col>
-              ))}
-            </Row>
+            <div className="games-grid">
+              <Row gutter={[24, 24]}>
+                {games.map(game => (
+                  <Col key={game.objectId} xs={24} sm={12} md={8} lg={6}>
+                    <GameCard
+                      game={game}
+                      isFavorite={isGameFavorite(game.objectId)}
+                      onEdit={handleEditGame}
+                      onDelete={handleDeleteGame}
+                      onToggleFavorite={handleToggleFavorite}
+                      onLike={handleLikeGame}
+                      canEdit={canEditGame(game)}
+                    />
+                  </Col>
+                ))}
+              </Row>
+            </div>
 
             {/* 分页 */}
-            <div className="games-pagination">
+            <div className="games-pagination-modern">
               <Pagination
                 current={currentPage}
                 total={total}
@@ -601,57 +841,17 @@ export const Games: React.FC = () => {
                 showTotal={(total, range) => 
                   `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
                 }
+                size="default"
               />
             </div>
           </>
         ) : (
-          <Empty
-            description={
-              <div>
-                <p>还没有游戏数据</p>
-                <Text type="secondary">
-                  你可以手动添加游戏，或者加载一些精选的示例游戏来快速开始体验
-                </Text>
-                <br />
-                <div style={{ 
-                  background: '#f6ffed', 
-                  border: '1px solid #b7eb8f', 
-                  borderRadius: '6px', 
-                  padding: '8px 12px', 
-                  margin: '8px 0',
-                  fontSize: '12px' 
-                }}>
-                  💡 <strong>首次使用提示</strong>：控制台的404错误是正常的，点击下方按钮即可解决
-                </div>
-              </div>
-            }
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          >
-            <Space>
-              <Button 
-                type="primary" 
-                onClick={handleAddGame}
-                icon={<PlusOutlined />}
-              >
-                手动添加游戏
-              </Button>
-              <Button 
-                onClick={() => setBatchImportVisible(true)}
-                icon={<DatabaseOutlined />}
-                type="default"
-              >
-                批量导入游戏
-              </Button>
-              <Button 
-                onClick={handleInitSampleData}
-                loading={initLoading}
-                icon={<ImportOutlined />}
-                type="default"
-              >
-                {initLoading ? '正在加载示例数据...' : '加载7个精选游戏'}
-              </Button>
-            </Space>
-          </Empty>
+          <EmptyState
+            onAddGame={handleAddGame}
+            onBatchImport={() => setBatchImportVisible(true)}
+            onInitSample={handleInitSampleData}
+            initLoading={initLoading}
+          />
         )}
       </Spin>
 

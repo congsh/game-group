@@ -1,38 +1,184 @@
+/**
+ * 主应用样式
+ * 现代化的应用入口样式
+ */
+
 .App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
   min-height: 100vh;
+  background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 页面过渡动画 */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 加载状态全局样式 */
+.app-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  min-height: 100vh;
+  background: #f5f5f5;
+  gap: 16px;
 }
 
-.App-link {
-  color: #61dafb;
+.app-loading .loading-spinner {
+  font-size: 32px;
+  color: #1890ff;
 }
 
-@keyframes App-logo-spin {
+.app-loading .loading-text {
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 500;
+}
+
+/* 错误状态样式 */
+.app-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 24px;
+  text-align: center;
+}
+
+.app-error .error-icon {
+  font-size: 64px;
+  color: #ff4d4f;
+  margin-bottom: 16px;
+}
+
+.app-error .error-title {
+  font-size: 24px;
+  color: rgba(0, 0, 0, 0.88);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.app-error .error-description {
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.65);
+  margin-bottom: 24px;
+  max-width: 500px;
+  line-height: 1.6;
+}
+
+.app-error .error-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* 应用版本信息 */
+.app-version {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.45);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: monospace;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .app-loading .loading-spinner {
+    font-size: 24px;
+  }
+  
+  .app-loading .loading-text {
+    font-size: 14px;
+  }
+  
+  .app-error .error-icon {
+    font-size: 48px;
+  }
+  
+  .app-error .error-title {
+    font-size: 20px;
+  }
+  
+  .app-error .error-description {
+    font-size: 14px;
+  }
+  
+  .app-version {
+    display: none;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .App {
+    background: #000000;
+  }
+  
+  .app-loading {
+    background: #000000;
+  }
+  
+  .app-loading .loading-text {
+    color: rgba(255, 255, 255, 0.65);
+  }
+  
+  .app-error {
+    background: #000000;
+  }
+  
+  .app-error .error-title {
+    color: rgba(255, 255, 255, 0.88);
+  }
+  
+  .app-error .error-description {
+    color: rgba(255, 255, 255, 0.65);
+  }
+  
+  .app-version {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.45);
+  }
+}
+
+/* 应用入场动画 */
+.App {
+  animation: appFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes appFadeIn {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
   }
 }
