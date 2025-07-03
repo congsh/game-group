@@ -20,7 +20,8 @@ import {
   Alert,
   Spin,
   message,
-  Rate
+  Rate,
+  Input
 } from 'antd';
 import {
   TrophyOutlined,
@@ -28,7 +29,8 @@ import {
   PlayCircleOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  StarOutlined
+  StarOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import { useVoteStore, useHasVotedToday, useTodayWantsToPlay, useTodaySelectedGames } from '../../store/votes';
 import { useGameStore } from '../../store/games';
@@ -61,13 +63,14 @@ const DailyVote: React.FC = () => {
   } = useVoteStore();
   
   // 游戏状态
-  const { games, loading: gamesLoading, fetchGames } = useGameStore();
+  const { allGames: games, allGamesLoading: gamesLoading, fetchAllGames } = useGameStore();
   
   // 本地状态
   const [wantsToPlay, setWantsToPlay] = useState(false);
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [gamePreferences, setGamePreferences] = useState<GamePreference[]>([]);
   const [voteSortBy, setVoteSortBy] = useState<'voteCount' | 'averageTendency' | 'gameName'>('voteCount');
+  const [gameSearchText, setGameSearchText] = useState(''); // 本地搜索文本
   
   // 从状态管理获取的衍生状态
   const hasVoted = useHasVotedToday();
@@ -80,8 +83,8 @@ const DailyVote: React.FC = () => {
   useEffect(() => {
     loadTodayVote();
     loadTodayStats();
-    fetchGames();
-  }, [loadTodayVote, loadTodayStats, fetchGames]);
+    fetchAllGames();
+  }, [loadTodayVote, loadTodayStats, fetchAllGames]);
 
   /**
    * 同步投票状态到表单
@@ -111,8 +114,103 @@ const DailyVote: React.FC = () => {
       };
       await submitVote(submitData);
       message.success(hasVoted ? '投票已更新！' : '投票已提交！');
+    } catch (error: any) {
+      console.error('投票提交失败:', error);
+      console.log('错误详情:', {
+        code: error.code,
+        message: error.message,
+        name: error.name
+      });
+      
+      // 如果是404错误，提示用户清除缓存
+      if (error.code === 404) {
+        console.log('检测到404错误，显示清除缓存选项');
+        message.error({
+          content: (
+            <div>
+              <div>投票失败：数据同步问题</div>
+              <div style={{ color: '#666', fontSize: '12px', marginTop: '4px' }}>
+                错误代码: {error.code}
+              </div>
+              <div style={{ marginTop: '8px' }}>
+                <Button 
+                  type="link" 
+                  size="small" 
+                  onClick={handleClearVoteCache}
+                  style={{ padding: '4px 8px 4px 0', height: 'auto', color: '#1890ff' }}
+                >
+                  🔄 清除缓存重试
+                </Button>
+                <Button 
+                  type="link" 
+                  size="small" 
+                  onClick={() => window.location.reload()}
+                  style={{ padding: '4px 0', height: 'auto', color: '#52c41a' }}
+                >
+                  🔃 刷新页面
+                </Button>
+              </div>
+            </div>
+          ),
+          duration: 12
+        });
+      } else {
+        // 其他错误的通用处理
+        message.error(`投票失败: ${error.message || '请重试'}`);
+      }
+    }
+  };
+
+  /**
+   * 清除投票缓存
+   */
+  const handleClearVoteCache = async () => {
+    const hide = message.loading('正在清除缓存并重新加载数据...', 0);
+    
+    try {
+      console.log('开始清除投票缓存...');
+      
+      // 动态导入clearVotesCaches函数
+      const { clearVotesCaches } = await import('../../services/dataCache');
+      clearVotesCaches();
+      console.log('投票缓存已清除');
+      
+      // 强制重新加载投票数据（绕过缓存）
+      console.log('重新加载投票数据...');
+      await Promise.all([
+        loadTodayVote(),
+        loadTodayStats()
+      ]);
+      
+      hide();
+      message.success({
+        content: (
+          <div>
+            <div>✅ 缓存已清除，数据已重新加载</div>
+            <div style={{ color: '#666', fontSize: '12px', marginTop: '4px' }}>
+              现在可以重新尝试投票了
+            </div>
+          </div>
+        ),
+        duration: 5
+      });
+      
+      console.log('缓存清除和数据重新加载完成');
+      
     } catch (error) {
-      message.error('投票失败，请重试');
+      hide();
+      console.error('清除缓存失败:', error);
+      message.error({
+        content: (
+          <div>
+            <div>❌ 清除缓存失败</div>
+            <div style={{ color: '#666', fontSize: '12px', marginTop: '4px' }}>
+              请刷新页面重试
+            </div>
+          </div>
+        ),
+        duration: 5
+      });
     }
   };
 
@@ -124,6 +222,7 @@ const DailyVote: React.FC = () => {
     if (!checked) {
       setSelectedGames([]);
       setGamePreferences([]);
+      setGameSearchText(''); // 清除搜索文本
       form.setFieldValue('selectedGames', []);
     }
   };
@@ -184,6 +283,25 @@ const DailyVote: React.FC = () => {
         } : null;
       })
       .filter(Boolean) as Array<{name: string, tendency?: number}>;
+  };
+
+  /**
+   * 本地游戏过滤函数
+   */
+  const getFilteredGames = () => {
+    if (!gameSearchText.trim()) {
+      return games;
+    }
+    
+    const searchText = gameSearchText.toLowerCase();
+    return games.filter(game => {
+      const nameMatch = game.name.toLowerCase().includes(searchText);
+      const platformMatch = game.platform?.toLowerCase().includes(searchText);
+      const typeMatch = game.type?.toLowerCase().includes(searchText);
+      const playersMatch = `${game.minPlayers}-${game.maxPlayers}`.includes(searchText);
+      
+      return nameMatch || platformMatch || typeMatch || playersMatch;
+    });
   };
 
   /**
@@ -255,6 +373,41 @@ const DailyVote: React.FC = () => {
         subtitle="每天投票选择你想玩的游戏，并为它们评分（1-5分），让我们一起决定今晚玩什么！"
         icon={<PlayCircleOutlined />}
       />
+
+      {/* 调试工具栏 */}
+      <Card size="small" style={{ marginBottom: 16, backgroundColor: '#fafafa' }}>
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              💡 如果遇到投票问题，可以尝试清除缓存
+            </Text>
+          </Col>
+          <Col>
+            <Space size="small">
+              <Button 
+                size="small" 
+                icon={<ReloadOutlined />}
+                onClick={handleClearVoteCache}
+                type="default"
+                style={{ fontSize: '12px' }}
+              >
+                清除缓存
+              </Button>
+              <Button 
+                size="small" 
+                onClick={() => {
+                  loadTodayVote();
+                  loadTodayStats();
+                  message.success('数据已刷新');
+                }}
+                style={{ fontSize: '12px' }}
+              >
+                刷新数据
+              </Button>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
 
       {error && (
         <Alert
@@ -363,19 +516,72 @@ const DailyVote: React.FC = () => {
                       { required: wantsToPlay, message: '请至少选择一个游戏' }
                     ]}
                   >
-                    <Select
-                      mode="multiple"
-                      placeholder="请选择游戏"
-                      showSearch
-                      onChange={handleGameSelectionChange}
-                    >
-                      {games.map(game => (
-                        <Option key={game.objectId} value={game.objectId}>
-                          {game.name} ({game.minPlayers}-{game.maxPlayers}人)
-                          {game.platform && <Text type="secondary"> - {game.platform}</Text>}
-                        </Option>
-                      ))}
-                    </Select>
+                    <div>
+                      {/* 游戏搜索输入框 */}
+                      <Input
+                        placeholder="🔍 搜索游戏名称、平台、类型或人数..."
+                        value={gameSearchText}
+                        onChange={(e) => setGameSearchText(e.target.value)}
+                        allowClear
+                        style={{ marginBottom: '8px' }}
+                        size="large"
+                      />
+                      
+                      {/* 游戏选择器 */}
+                      <Select
+                        mode="multiple"
+                        placeholder={
+                          games.length === 0 
+                            ? "暂无游戏可选，请先在游戏库中添加游戏"
+                            : `从 ${games.length} 个游戏中选择${gameSearchText ? `（筛选出 ${getFilteredGames().length} 个）` : ''}`
+                        }
+                        value={selectedGames}
+                        onChange={handleGameSelectionChange}
+                        style={{ width: '100%' }}
+                        size="large"
+                        maxTagCount="responsive"
+                        showSearch={false} // 禁用内置搜索，使用我们的本地搜索
+                        open={getFilteredGames().length > 0 ? undefined : false} // 没有匹配结果时不显示下拉
+                        disabled={games.length === 0} // 没有游戏时禁用
+                      >
+                        {getFilteredGames().map(game => (
+                          <Option key={game.objectId} value={game.objectId}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>
+                                {game.name} ({game.minPlayers}-{game.maxPlayers}人)
+                              </span>
+                              <div>
+                                {game.platform && (
+                                  <Tag color="blue" style={{ margin: '0 2px', fontSize: '12px' }}>
+                                    {game.platform}
+                                  </Tag>
+                                )}
+                                {game.type && (
+                                  <Tag color="green" style={{ margin: '0 2px', fontSize: '12px' }}>
+                                    {game.type}
+                                  </Tag>
+                                )}
+                              </div>
+                            </div>
+                          </Option>
+                        ))}
+                      </Select>
+                      
+                      {/* 搜索结果提示 */}
+                      {gameSearchText && getFilteredGames().length === 0 && (
+                        <div style={{ 
+                          textAlign: 'center', 
+                          color: '#999', 
+                          fontSize: '14px', 
+                          marginTop: '8px',
+                          padding: '16px',
+                          border: '1px dashed #d9d9d9',
+                          borderRadius: '6px'
+                        }}>
+                          😅 没有找到匹配的游戏，试试其他关键词？
+                        </div>
+                      )}
+                    </div>
                   </Form.Item>
 
                   {/* 游戏倾向度评分 */}
@@ -518,6 +724,39 @@ const DailyVote: React.FC = () => {
                     type="info"
                     showIcon
                   />
+                )}
+
+                {/* 投票用户列表 */}
+                {todayStats && todayStats.totalVotes > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <Title level={5} style={{ marginBottom: 8 }}>
+                      📝 今日投票用户 ({todayStats.totalVotes}人)
+                    </Title>
+                    <div style={{ 
+                      maxHeight: 120, 
+                      overflowY: 'auto',
+                      background: '#fafafa',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      border: '1px solid #d9d9d9'
+                    }}>
+                      {todayStats.voterList?.map((voter, index) => (
+                        <Tag 
+                          key={index}
+                          color={voter.wantsToPlay ? 'green' : 'default'}
+                          style={{ margin: '2px' }}
+                        >
+                          {voter.userName} 
+                          {voter.wantsToPlay ? ' ✓' : ' ✗'}
+                        </Tag>
+                      )) || (
+                        <Text type="secondary">暂无投票用户信息</Text>
+                      )}
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      ✓ 表示想玩，✗ 表示不想玩
+                    </Text>
+                  </div>
                 )}
               </Space>
             ) : (

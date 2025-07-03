@@ -8,11 +8,15 @@ import * as gameService from '../services/games';
 import { useAuthStore } from './auth';
 
 interface GameState {
-  // 游戏列表
+  // 游戏列表（用于游戏库页面，受筛选影响）
   games: Game[];
   total: number;
   loading: boolean;
   error: string | null;
+  
+  // 完整游戏列表（不受筛选影响，用于投票和组队页面）
+  allGames: Game[];
+  allGamesLoading: boolean;
   
   // 分页
   currentPage: number;
@@ -34,6 +38,7 @@ interface GameState {
   
   // 操作方法
   fetchGames: () => Promise<void>;
+  fetchAllGames: () => Promise<void>;
   fetchGameById: (id: string) => Promise<void>;
   createGame: (gameData: GameForm) => Promise<void>;
   updateGame: (id: string, gameData: GameForm) => Promise<void>;
@@ -65,6 +70,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   total: 0,
   loading: false,
   error: null,
+  
+  allGames: [],
+  allGamesLoading: false,
   
   currentPage: 1,
   pageSize: 20,
@@ -100,6 +108,25 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   /**
+   * 获取所有游戏
+   */
+  fetchAllGames: async () => {
+    set({ allGamesLoading: true, error: null });
+    
+    try {
+      const allGames = await gameService.getAllGames();
+      set({ allGames, allGamesLoading: false });
+    } catch (error: any) {
+      // 不显示404错误，因为这只是数据表不存在
+      if (!error.message.includes('Class or object doesn\'t exists')) {
+        set({ error: error.message, allGamesLoading: false });
+      } else {
+        set({ allGamesLoading: false });
+      }
+    }
+  },
+  
+  /**
    * 根据ID获取游戏详情
    */
   fetchGameById: async (id: string) => {
@@ -121,9 +148,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     try {
       const newGame = await gameService.createGame(gameData);
-      const { games } = get();
+      const { games, allGames } = get();
       set({ 
         games: [newGame, ...games],
+        allGames: [newGame, ...allGames],
         total: get().total + 1,
         loading: false 
       });
@@ -141,13 +169,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     try {
       const updatedGame = await gameService.updateGame(id, gameData);
-      const { games } = get();
+      const { games, allGames } = get();
       const updatedGames = games.map(game => 
+        game.objectId === id ? updatedGame : game
+      );
+      const updatedAllGames = allGames.map(game => 
         game.objectId === id ? updatedGame : game
       );
       
       set({ 
         games: updatedGames,
+        allGames: updatedAllGames,
         selectedGame: updatedGame,
         loading: false 
       });
@@ -165,11 +197,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     try {
       await gameService.deleteGame(id);
-      const { games } = get();
+      const { games, allGames } = get();
       const filteredGames = games.filter(game => game.objectId !== id);
+      const filteredAllGames = allGames.filter(game => game.objectId !== id);
       
       set({ 
         games: filteredGames,
+        allGames: filteredAllGames,
         total: get().total - 1,
         selectedGame: get().selectedGame?.objectId === id ? null : get().selectedGame,
         loading: false 
@@ -186,14 +220,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   likeGame: async (id: string) => {
     try {
       await gameService.likeGame(id);
-      const { games } = get();
+      const { games, allGames } = get();
       const updatedGames = games.map(game => 
         game.objectId === id 
           ? { ...game, likeCount: game.likeCount + 1 } 
           : game
       );
+      const updatedAllGames = allGames.map(game => 
+        game.objectId === id 
+          ? { ...game, likeCount: game.likeCount + 1 } 
+          : game
+      );
       
-      set({ games: updatedGames });
+      set({ games: updatedGames, allGames: updatedAllGames });
     } catch (error: any) {
       set({ error: error.message });
       throw error;
@@ -206,14 +245,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   unlikeGame: async (id: string) => {
     try {
       await gameService.unlikeGame(id);
-      const { games } = get();
+      const { games, allGames } = get();
       const updatedGames = games.map(game => 
         game.objectId === id 
           ? { ...game, likeCount: Math.max(0, game.likeCount - 1) } 
           : game
       );
+      const updatedAllGames = allGames.map(game => 
+        game.objectId === id 
+          ? { ...game, likeCount: Math.max(0, game.likeCount - 1) } 
+          : game
+      );
       
-      set({ games: updatedGames });
+      set({ games: updatedGames, allGames: updatedAllGames });
     } catch (error: any) {
       set({ error: error.message });
       throw error;
@@ -232,6 +276,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       // 如果有成功导入的游戏，刷新列表
       if (result.success > 0) {
         await get().fetchGames();
+        await get().fetchAllGames();
       }
       
       set({ loading: false });
@@ -266,7 +311,7 @@ export const useGameStore = create<GameState>((set, get) => ({
    */
   toggleFavorite: async (gameId: string) => {
     try {
-      const { favoriteGames } = get();
+      const { favoriteGames, allGames } = get();
       const isFavorite = favoriteGames.some(game => game.objectId === gameId);
       
       if (isFavorite) {
@@ -278,8 +323,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         const favoriteGameIds = updatedFavorites.map(game => game.objectId);
         await useAuthStore.getState().updateFavoriteGames(favoriteGameIds);
       } else {
-        // 添加收藏
-        const game = get().games.find(g => g.objectId === gameId) || get().selectedGame;
+        // 添加收藏 - 优先从allGames中查找，然后从games中查找
+        const game = allGames.find(g => g.objectId === gameId) || 
+                     get().games.find(g => g.objectId === gameId) || 
+                     get().selectedGame;
         if (game) {
           const updatedFavorites = [...favoriteGames, game];
           set({ favoriteGames: updatedFavorites });

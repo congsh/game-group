@@ -190,96 +190,245 @@ export const getGameFavoriteReport = async (query: ReportQuery): Promise<GameFav
  */
 export const getVoteReport = async (query: ReportQuery): Promise<VoteReport> => {
   try {
-    // 获取投票数据
-    const voteQuery = new AV.Query('DailyVote');
-    if (query.startDate && query.endDate) {
-      voteQuery.greaterThanOrEqualTo('createdAt', new Date(query.startDate));
-      voteQuery.lessThanOrEqualTo('createdAt', new Date(query.endDate));
-    }
-    voteQuery.limit(10000);
-    const votes = await voteQuery.find();
-
-    // 获取游戏信息
-    const gameQuery = new AV.Query('Game');
-    const games = await gameQuery.find();
-    const gameNameMap = new Map<string, string>();
-    games.forEach(game => {
-      gameNameMap.set(game.id!, game.get('name'));
-    });
-
-    // 处理投票参与统计
-    const dailyStats = new Map<string, { totalVotes: number; wantToPlayCount: number; users: Set<string> }>();
+    // 使用批量投票数据获取，减少API请求
+    const { getBatchVoteStats } = await import('./dataCache');
     
-    votes.forEach(vote => {
-      const date = vote.get('date');
-      const user = vote.get('user');
-      const wantsToPlay = vote.get('wantsToPlay');
-      
-      if (!dailyStats.has(date)) {
-        dailyStats.set(date, { totalVotes: 0, wantToPlayCount: 0, users: new Set() });
-      }
-      
-      const dayStats = dailyStats.get(date)!;
-      dayStats.totalVotes++;
-      dayStats.users.add(user);
-      if (wantsToPlay) {
-        dayStats.wantToPlayCount++;
-      }
-    });
-
-    const participationStats = Array.from(dailyStats.entries()).map(([date, stats]) => ({
-      date,
-      totalVotes: stats.totalVotes,
-      wantToPlayCount: stats.wantToPlayCount,
-      participationRate: stats.totalVotes > 0 ? stats.wantToPlayCount / stats.totalVotes : 0
-    })).sort((a, b) => a.date.localeCompare(b.date));
-
-    // 处理游戏得票排行
-    const gameVoteStats = new Map<string, { totalVotes: number; tendencySum: number; tendencyCount: number; days: Set<string> }>();
+    // 根据时间范围计算天数
+    let days = 7; // 默认7天
+    if (query.timeRange === 'month') days = 30;
+    else if (query.timeRange === 'quarter') days = 90;
+    else if (query.timeRange === 'year') days = 365;
     
-    votes.forEach(vote => {
-      const selectedGames = vote.get('selectedGames') || [];
-      const gamePreferences = vote.get('gamePreferences') || [];
-      const date = vote.get('date');
+    // 获取批量投票统计数据
+    const batchStats = await getBatchVoteStats(days);
+    
+    // 如果批量数据为空，尝试直接查询
+    if (Object.keys(batchStats).length === 0) {
+      console.log('批量数据为空，尝试直接查询投票数据...');
       
-      selectedGames.forEach((gameId: string) => {
-        if (!gameVoteStats.has(gameId)) {
-          gameVoteStats.set(gameId, { totalVotes: 0, tendencySum: 0, tendencyCount: 0, days: new Set() });
+      // 获取投票数据
+      const voteQuery = new AV.Query('DailyVote');
+      if (query.startDate && query.endDate) {
+        voteQuery.greaterThanOrEqualTo('createdAt', new Date(query.startDate));
+        voteQuery.lessThanOrEqualTo('createdAt', new Date(query.endDate));
+      }
+      voteQuery.limit(10000);
+      const votes = await voteQuery.find();
+
+      // 获取游戏信息
+      const gameQuery = new AV.Query('Game');
+      const games = await gameQuery.find();
+      const gameNameMap = new Map<string, string>();
+      games.forEach(game => {
+        gameNameMap.set(game.id!, game.get('name'));
+      });
+
+      // 处理投票参与统计
+      const dailyStats = new Map<string, { totalVotes: number; wantToPlayCount: number; users: Set<string> }>();
+      
+      votes.forEach(vote => {
+        const date = vote.get('date');
+        const user = vote.get('userId') || vote.get('user'); // 兼容新旧字段
+        const wantsToPlay = vote.get('wantsToPlay');
+        
+        if (!dailyStats.has(date)) {
+          dailyStats.set(date, { totalVotes: 0, wantToPlayCount: 0, users: new Set() });
         }
         
-        const gameStats = gameVoteStats.get(gameId)!;
-        gameStats.totalVotes++;
-        gameStats.days.add(date);
-        
-        // 查找对应的倾向度
-        const preference = gamePreferences.find((pref: any) => pref.gameId === gameId);
-        if (preference && preference.tendency) {
-          gameStats.tendencySum += preference.tendency;
-          gameStats.tendencyCount++;
+        const dayStats = dailyStats.get(date)!;
+        dayStats.totalVotes++;
+        dayStats.users.add(user);
+        if (wantsToPlay) {
+          dayStats.wantToPlayCount++;
         }
       });
-    });
 
+      const participationStats = Array.from(dailyStats.entries()).map(([date, stats]) => ({
+        date,
+        totalVotes: stats.totalVotes,
+        wantToPlayCount: stats.wantToPlayCount,
+        participationRate: stats.totalVotes > 0 ? stats.wantToPlayCount / stats.totalVotes : 0
+      })).sort((a, b) => a.date.localeCompare(b.date));
+
+      // 处理游戏得票排行
+      const gameVoteStats = new Map<string, { totalVotes: number; tendencySum: number; tendencyCount: number; days: Set<string> }>();
+      
+      votes.forEach(vote => {
+        const selectedGames = vote.get('selectedGames') || [];
+        const gamePreferences = vote.get('gamePreferences') || [];
+        const date = vote.get('date');
+        
+        selectedGames.forEach((gameId: string) => {
+          if (!gameVoteStats.has(gameId)) {
+            gameVoteStats.set(gameId, { totalVotes: 0, tendencySum: 0, tendencyCount: 0, days: new Set() });
+          }
+          
+          const gameStats = gameVoteStats.get(gameId)!;
+          gameStats.totalVotes++;
+          gameStats.days.add(date);
+          
+          // 查找对应的倾向度
+          const preference = gamePreferences.find((pref: any) => pref.gameId === gameId);
+          if (preference && preference.tendency) {
+            gameStats.tendencySum += preference.tendency;
+            gameStats.tendencyCount++;
+          }
+        });
+      });
+
+      const topVotedGames = Array.from(gameVoteStats.entries())
+        .map(([gameId, stats]) => ({
+          gameId,
+          gameName: gameNameMap.get(gameId) || '未知游戏',
+          totalVotes: stats.totalVotes,
+          averageTendency: stats.tendencyCount > 0 ? stats.tendencySum / stats.tendencyCount : 0,
+          uniqueDays: stats.days.size
+        }))
+        .sort((a, b) => b.totalVotes - a.totalVotes)
+        .slice(0, 10);
+
+      // 用户活跃度统计
+      const userVoteStats = new Map<string, { voteDays: Set<string>; totalVotes: number; tendencySum: number; tendencyCount: number }>();
+      
+      votes.forEach(vote => {
+        // 优先使用昵称，如果没有则使用ID
+        const userName = vote.get('user') || `用户${(vote.get('userId') || '').slice(-4)}`;
+        const userId = vote.get('userId') || vote.get('user');
+        const date = vote.get('date');
+        const gamePreferences = vote.get('gamePreferences') || [];
+        
+        const userKey = userName; // 使用昵称作为key
+        
+        if (!userVoteStats.has(userKey)) {
+          userVoteStats.set(userKey, { voteDays: new Set(), totalVotes: 0, tendencySum: 0, tendencyCount: 0 });
+        }
+        
+        const userStats = userVoteStats.get(userKey)!;
+        userStats.voteDays.add(date);
+        userStats.totalVotes++;
+        
+        gamePreferences.forEach((pref: any) => {
+          if (pref.tendency) {
+            userStats.tendencySum += pref.tendency;
+            userStats.tendencyCount++;
+          }
+        });
+      });
+
+      const userActivity = Array.from(userVoteStats.entries())
+        .map(([userName, stats]) => ({
+          userId: userName, // 这里存储的是昵称
+          username: userName,
+          voteDays: stats.voteDays.size,
+          totalVotes: stats.totalVotes,
+          averageTendency: stats.tendencyCount > 0 ? stats.tendencySum / stats.tendencyCount : 0
+        }))
+        .sort((a, b) => b.voteDays - a.voteDays)
+        .slice(0, 10);
+
+      // 生成投票趋势数据
+      const voteTrend = participationStats.map(stat => ({
+        date: stat.date,
+        totalVotes: stat.totalVotes,
+        uniqueUsers: dailyStats.get(stat.date)?.users.size || 0,
+        averageTendency: 0 // 需要根据具体数据计算
+      }));
+
+      // 简化的峰值数据
+      const peakVotes = {
+        week: topVotedGames.slice(0, 3).map(game => ({
+          gameId: game.gameId,
+          gameName: game.gameName,
+          voteCount: game.totalVotes,
+          weekStart: formatDate(new Date())
+        })),
+        month: topVotedGames.slice(0, 5).map(game => ({
+          gameId: game.gameId,
+          gameName: game.gameName,
+          voteCount: game.totalVotes,
+          month: new Date().getMonth() + 1 + '月'
+        })),
+        quarter: topVotedGames.slice(0, 5).map(game => ({
+          gameId: game.gameId,
+          gameName: game.gameName,
+          voteCount: game.totalVotes,
+          quarter: Math.ceil((new Date().getMonth() + 1) / 3) + '季度'
+        }))
+      };
+
+      return {
+        participationStats,
+        topVotedGames,
+        peakVotes,
+        userActivity,
+        voteTrend
+      };
+    }
+    
+    // 使用批量统计数据生成报表
+    const dates = Object.keys(batchStats).sort();
+    
+    // 生成参与度统计
+    const participationStats = dates.map(date => {
+      const dayStats = batchStats[date];
+      return {
+        date,
+        totalVotes: dayStats.totalVotes || 0,
+        wantToPlayCount: dayStats.wantToPlayCount || 0,
+        participationRate: dayStats.totalVotes > 0 ? dayStats.wantToPlayCount / dayStats.totalVotes : 0
+      };
+    });
+    
+    // 聚合游戏得票统计
+    const gameVoteStats = new Map<string, { totalVotes: number; gameName: string; days: Set<string> }>();
+    
+    dates.forEach(date => {
+      const dayStats = batchStats[date];
+      if (dayStats.topGames) {
+        dayStats.topGames.forEach((game: any) => {
+          if (!gameVoteStats.has(game.gameId)) {
+            gameVoteStats.set(game.gameId, { 
+              totalVotes: 0, 
+              gameName: game.gameName,
+              days: new Set()
+            });
+          }
+          const stats = gameVoteStats.get(game.gameId)!;
+          stats.totalVotes += game.voteCount;
+          stats.days.add(date);
+        });
+      }
+    });
+    
     const topVotedGames = Array.from(gameVoteStats.entries())
       .map(([gameId, stats]) => ({
         gameId,
-        gameName: gameNameMap.get(gameId) || '未知游戏',
+        gameName: stats.gameName,
         totalVotes: stats.totalVotes,
-        averageTendency: stats.tendencyCount > 0 ? stats.tendencySum / stats.tendencyCount : 0,
+        averageTendency: 0, // 需要从详细数据计算
         uniqueDays: stats.days.size
       }))
       .sort((a, b) => b.totalVotes - a.totalVotes)
       .slice(0, 10);
-
-    // 生成投票趋势数据
+    
+    // 简化的用户活跃度统计
+    const userActivity = [{
+      userId: 'aggregate',
+      username: '总计数据',
+      voteDays: dates.length,
+      totalVotes: participationStats.reduce((sum, stat) => sum + stat.totalVotes, 0),
+      averageTendency: 0
+    }];
+    
+    // 投票趋势数据
     const voteTrend = participationStats.map(stat => ({
       date: stat.date,
       totalVotes: stat.totalVotes,
-      uniqueUsers: dailyStats.get(stat.date)?.users.size || 0,
-      averageTendency: 0 // 需要根据具体数据计算
+      uniqueUsers: stat.totalVotes, // 简化统计
+      averageTendency: 0
     }));
-
-    // 简化的峰值数据（这里可以根据实际需求扩展）
+    
+    // 峰值数据
     const peakVotes = {
       week: topVotedGames.slice(0, 3).map(game => ({
         gameId: game.gameId,
@@ -301,41 +450,6 @@ export const getVoteReport = async (query: ReportQuery): Promise<VoteReport> => 
       }))
     };
 
-    // 用户活跃度统计
-    const userVoteStats = new Map<string, { voteDays: Set<string>; totalVotes: number; tendencySum: number; tendencyCount: number }>();
-    
-    votes.forEach(vote => {
-      const user = vote.get('user');
-      const date = vote.get('date');
-      const gamePreferences = vote.get('gamePreferences') || [];
-      
-      if (!userVoteStats.has(user)) {
-        userVoteStats.set(user, { voteDays: new Set(), totalVotes: 0, tendencySum: 0, tendencyCount: 0 });
-      }
-      
-      const userStats = userVoteStats.get(user)!;
-      userStats.voteDays.add(date);
-      userStats.totalVotes++;
-      
-      gamePreferences.forEach((pref: any) => {
-        if (pref.tendency) {
-          userStats.tendencySum += pref.tendency;
-          userStats.tendencyCount++;
-        }
-      });
-    });
-
-    const userActivity = Array.from(userVoteStats.entries())
-      .map(([userId, stats]) => ({
-        userId,
-        username: `用户${userId.slice(-4)}`, // 简化显示
-        voteDays: stats.voteDays.size,
-        totalVotes: stats.totalVotes,
-        averageTendency: stats.tendencyCount > 0 ? stats.tendencySum / stats.tendencyCount : 0
-      }))
-      .sort((a, b) => b.voteDays - a.voteDays)
-      .slice(0, 10);
-
     return {
       participationStats,
       topVotedGames,
@@ -345,7 +459,15 @@ export const getVoteReport = async (query: ReportQuery): Promise<VoteReport> => 
     };
   } catch (error) {
     console.error('获取投票报表失败:', error);
-    throw error;
+    
+    // 返回空数据以避免页面崩溃
+    return {
+      participationStats: [],
+      topVotedGames: [],
+      peakVotes: { week: [], month: [], quarter: [] },
+      userActivity: [],
+      voteTrend: []
+    };
   }
 };
 

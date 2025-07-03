@@ -13,7 +13,8 @@ export interface GamePreference {
 export interface DailyVote {
   objectId: string;
   date: string;              // 投票日期 (YYYY-MM-DD)
-  user: string;              // 投票用户ID
+  user: string;              // 投票用户昵称（显示用）
+  userId?: string;           // 投票用户ID（保持兼容性）
   wantsToPlay: boolean;      // 是否想玩
   selectedGames: string[];   // 选择的游戏ID列表
   gamePreferences?: GamePreference[];  // 游戏倾向度评分（可选，保持向后兼容）
@@ -41,5 +42,11 @@ export interface VoteStats {
   gameTendencies?: Record<string, {    // 游戏倾向度统计（可选）
     averageTendency: number;           // 平均倾向度
     tendencyCount: number;             // 评分人数
+  }>;
+  voterList?: Array<{                  // 投票用户列表（可选）
+    userName: string;                  // 用户昵称
+    userId?: string;                   // 用户ID（可选）
+    wantsToPlay: boolean;              // 是否想玩
+    votedAt: Date;                     // 投票时间
   }>;
 } 

@@ -11,7 +11,9 @@ import {
   TimePicker,
   Button,
   Space,
-  message
+  message,
+  Input,
+  Tag
 } from 'antd';
 import {
   CalendarOutlined,
@@ -40,18 +42,38 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
   onSuccess
 }) => {
   const [form] = Form.useForm();
-  const { games, fetchGames } = useGameStore();
+  const { allGames: games, fetchAllGames } = useGameStore(); // 使用独立的完整游戏列表
   const { createTeam, submitting } = useTeamStore();
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
+  const [gameSearchText, setGameSearchText] = useState(''); // 本地搜索文本
 
   /**
    * 初始化数据
    */
   useEffect(() => {
     if (visible && games.length === 0) {
-      fetchGames();
+      fetchAllGames();
     }
-  }, [visible, games.length, fetchGames]);
+  }, [visible, games.length, fetchAllGames]);
+
+  /**
+   * 本地游戏过滤函数
+   */
+  const getFilteredGames = () => {
+    if (!gameSearchText.trim()) {
+      return games;
+    }
+    
+    const searchText = gameSearchText.toLowerCase();
+    return games.filter(game => {
+      const nameMatch = game.name.toLowerCase().includes(searchText);
+      const platformMatch = game.platform?.toLowerCase().includes(searchText);
+      const typeMatch = game.type?.toLowerCase().includes(searchText);
+      const playersMatch = `${game.minPlayers}-${game.maxPlayers}`.includes(searchText);
+      
+      return nameMatch || platformMatch || typeMatch || playersMatch;
+    });
+  };
 
   /**
    * 表单提交处理
@@ -86,6 +108,7 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
   const handleCancel = () => {
     form.resetFields();
     setSelectedDate(null);
+    setGameSearchText(''); // 清除搜索文本
     onCancel();
   };
 
@@ -178,19 +201,68 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
           }
           rules={[{ required: true, message: '请选择游戏' }]}
         >
-          <Select
-            placeholder="请选择要组队的游戏"
-            showSearch
-            filterOption={(input, option) =>
-              (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-            }
-          >
-            {games.map(game => (
-              <Option key={game.objectId} value={game.objectId}>
-                {game.name} ({game.minPlayers}-{game.maxPlayers}人)
-              </Option>
-            ))}
-          </Select>
+          <div>
+            {/* 游戏搜索输入框 */}
+            <Input
+              placeholder="🔍 搜索游戏名称、平台、类型或人数..."
+              value={gameSearchText}
+              onChange={(e) => setGameSearchText(e.target.value)}
+              allowClear
+              style={{ marginBottom: '8px' }}
+              size="large"
+            />
+            
+            {/* 游戏选择器 */}
+            <Select
+              placeholder={
+                games.length === 0 
+                  ? "暂无游戏可选，请先在游戏库中添加游戏"
+                  : `从 ${games.length} 个游戏中选择要组队的游戏${gameSearchText ? `（筛选出 ${getFilteredGames().length} 个）` : ''}`
+              }
+              showSearch={false} // 禁用内置搜索，使用我们的本地搜索
+              style={{ width: '100%' }}
+              size="large"
+              open={getFilteredGames().length > 0 ? undefined : false} // 没有匹配结果时不显示下拉
+              disabled={games.length === 0} // 没有游戏时禁用
+            >
+              {getFilteredGames().map(game => (
+                <Option key={game.objectId} value={game.objectId}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      {game.name} ({game.minPlayers}-{game.maxPlayers}人)
+                    </span>
+                    <div>
+                      {game.platform && (
+                        <Tag color="blue" style={{ margin: '0 2px', fontSize: '12px' }}>
+                          {game.platform}
+                        </Tag>
+                      )}
+                      {game.type && (
+                        <Tag color="green" style={{ margin: '0 2px', fontSize: '12px' }}>
+                          {game.type}
+                        </Tag>
+                      )}
+                    </div>
+                  </div>
+                </Option>
+              ))}
+            </Select>
+            
+            {/* 搜索结果提示 */}
+            {gameSearchText && getFilteredGames().length === 0 && (
+              <div style={{ 
+                textAlign: 'center', 
+                color: '#999', 
+                fontSize: '14px', 
+                marginTop: '8px',
+                padding: '16px',
+                border: '1px dashed #d9d9d9',
+                borderRadius: '6px'
+              }}>
+                😅 没有找到匹配的游戏，试试其他关键词？
+              </div>
+            )}
+          </div>
         </Form.Item>
 
         <Form.Item
