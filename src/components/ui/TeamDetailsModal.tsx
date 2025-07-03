@@ -2,7 +2,7 @@
  * 组队详情模态框组件
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   Card,
@@ -13,7 +13,8 @@ import {
   List,
   Typography,
   Divider,
-  message
+  message,
+  Alert
 } from 'antd';
 import {
   TeamOutlined,
@@ -22,11 +23,13 @@ import {
   UserOutlined,
   CrownOutlined,
   ExclamationCircleOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  ScheduleOutlined
 } from '@ant-design/icons';
-import { TeamDetails } from '../../types/team';
+import { TeamDetails, JoinTeamForm } from '../../types/team';
 import { useTeamStore } from '../../store/teams';
 import { useAuthStore } from '../../store/auth';
+import JoinTeamModal from './JoinTeamModal';
 
 const { Text } = Typography;
 const { confirm } = Modal;
@@ -49,21 +52,29 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
   onJoin,
   onLeave
 }) => {
-  const { joinTeam, leaveTeam, dissolveTeam, joining } = useTeamStore();
+  const { joinTeam, joinTeamWithTime, leaveTeam, dissolveTeam, joining } = useTeamStore();
   const { user } = useAuthStore();
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
 
   if (!team) return null;
 
   /**
-   * 处理加入队伍
+   * 打开加入队伍模态框
    */
-  const handleJoin = async () => {
+  const handleOpenJoinModal = () => {
+    setJoinModalVisible(true);
+  };
+
+  /**
+   * 处理加入队伍（带个性化时间）
+   */
+  const handleJoinWithTime = async (joinForm: JoinTeamForm) => {
     try {
-      await joinTeam(team.objectId);
-      message.success('已成功加入队伍！');
+      await joinTeamWithTime(joinForm);
+      setJoinModalVisible(false);
       onJoin?.();
     } catch (error) {
-      message.error('加入队伍失败，请重试');
+      throw error; // 让JoinTeamModal处理错误显示
     }
   };
 
@@ -169,11 +180,11 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
         <Button
           key="join"
           type="primary"
-          icon={<TeamOutlined />}
+          icon={<ScheduleOutlined />}
           loading={joining}
-          onClick={handleJoin}
+          onClick={handleOpenJoinModal}
         >
-          加入队伍
+          设置时间并加入
         </Button>
       );
     }
@@ -292,7 +303,55 @@ const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
             创建于 {new Date(team.createdAt).toLocaleString()}
           </Text>
         </div>
+
+        {/* 成员时间信息展示 */}
+        {team.memberTimeInfo && team.memberTimeInfo.length > 0 && (
+          <Card
+            size="small"
+            title={
+              <Space>
+                <ScheduleOutlined />
+                成员时间安排
+              </Space>
+            }
+            style={{ marginTop: 16 }}
+          >
+            <List
+              size="small"
+              dataSource={team.memberTimeInfo}
+              renderItem={(memberTime) => (
+                <List.Item key={memberTime.userId}>
+                  <List.Item.Meta
+                    title={
+                      <Space>
+                        {memberTime.username}
+                        {memberTime.userId === team.leader && (
+                          <Tag color="gold">队长</Tag>
+                        )}
+                      </Space>
+                    }
+                    description={
+                      <Space>
+                        <ClockCircleOutlined />
+                        {memberTime.startTime} - {memberTime.endTime}
+                      </Space>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </Card>
+        )}
       </div>
+
+      {/* 加入队伍模态框 */}
+      <JoinTeamModal
+        visible={joinModalVisible}
+        team={team}
+        onCancel={() => setJoinModalVisible(false)}
+        onJoin={handleJoinWithTime}
+        loading={joining}
+      />
     </Modal>
   );
 };

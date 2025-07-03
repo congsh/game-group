@@ -342,24 +342,24 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
   };
 
   /**
-   * 禁用非周末日期
+   * 禁用过去的日期，允许任何未来日期
    */
   const disabledDate = (current: Dayjs) => {
     if (!current) return false;
     
-    // 禁用过去的日期
+    // 只禁用过去的日期
     if (current && current < dayjs().startOf('day')) {
       return true;
     }
     
-    // 只允许选择未来8周内的周末
+    // 只允许选择未来8周内的日期
     const eightWeeksLater = dayjs().add(8, 'week');
     if (current && current > eightWeeksLater) {
       return true;
     }
     
-    // 只允许选择周末
-    return !isWeekend(current);
+    // 允许选择任何日期（不再限制为只有周末）
+    return false;
   };
 
   /**
@@ -383,7 +383,7 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
       title={
         <Space>
           <RocketOutlined />
-          创建周末组队
+          创建游戏组队
         </Space>
       }
       open={visible}
@@ -502,7 +502,7 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
         >
           <DatePicker
             style={{ width: '100%' }}
-            placeholder="请选择周末日期"
+            placeholder="请选择游戏日期"
             disabledDate={disabledDate}
             format="YYYY-MM-DD"
             onChange={setSelectedDate}
@@ -555,7 +555,7 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
             marginBottom: '16px'
           }}>
             <p style={{ margin: 0, color: '#52c41a' }}>
-              📅 活动将在 {selectedDate.format('YYYY年MM月DD日')} ({selectedDate.format('dddd')}) 举行
+              📅 游戏活动将在 {selectedDate.format('YYYY年MM月DD日')} ({selectedDate.format('dddd')}) 举行
             </p>
           </div>
         )}

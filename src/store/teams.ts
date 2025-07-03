@@ -4,12 +4,13 @@
  */
 
 import { create } from 'zustand';
-import { TeamForm, TeamFilters, TeamDetails } from '../types/team';
+import { TeamForm, TeamFilters, TeamDetails, JoinTeamForm } from '../types/team';
 import {
   createWeekendTeam,
   getWeekendTeams,
   getWeekendTeamById,
   joinWeekendTeam,
+  joinWeekendTeamWithTime,
   leaveWeekendTeam,
   dissolveWeekendTeam,
   getRecommendedTeams
@@ -41,6 +42,7 @@ interface TeamState {
   fetchTeamById: (teamId: string) => Promise<void>;
   createTeam: (teamForm: TeamForm) => Promise<void>;
   joinTeam: (teamId: string) => Promise<void>;
+  joinTeamWithTime: (joinForm: JoinTeamForm) => Promise<void>;
   leaveTeam: (teamId: string) => Promise<void>;
   dissolveTeam: (teamId: string) => Promise<void>;
   fetchRecommendedTeams: () => Promise<void>;
@@ -176,7 +178,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   },
 
   /**
-   * 加入组队
+   * 加入组队（兼容旧版本）
    */
   joinTeam: async (teamId: string) => {
     const { user } = useAuthStore.getState();
@@ -219,6 +221,35 @@ export const useTeamStore = create<TeamState>((set, get) => ({
         selectedTeam: updatedSelectedTeam,
         joining: false 
       });
+    } catch (error) {
+      console.error('加入组队失败:', error);
+      set({ 
+        error: error instanceof Error ? error.message : '加入组队失败',
+        joining: false 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * 加入组队（带个性化时间）
+   */
+  joinTeamWithTime: async (joinForm: JoinTeamForm) => {
+    const { user } = useAuthStore.getState();
+    if (!user) {
+      set({ error: '用户未登录' });
+      return;
+    }
+
+    set({ joining: true, error: null });
+
+    try {
+      await joinWeekendTeamWithTime(joinForm, user.objectId);
+      
+      // 刷新数据以获取最新状态
+      get().fetchTeams();
+      
+      set({ joining: false });
     } catch (error) {
       console.error('加入组队失败:', error);
       set({ 

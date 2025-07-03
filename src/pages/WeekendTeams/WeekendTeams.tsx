@@ -29,6 +29,7 @@ import { initWeekendTeamTable } from '../../utils/initData';
 import PageHeader from '../../components/common/PageHeader';
 import CreateTeamModal from '../../components/ui/CreateTeamModal';
 import TeamDetailsModal from '../../components/ui/TeamDetailsModal';
+import JoinTeamModal from '../../components/ui/JoinTeamModal';
 
 
 const { Option } = Select;
@@ -42,6 +43,7 @@ const WeekendTeams: React.FC = () => {
     loading,
     fetchTeams,
     joinTeam,
+    joinTeamWithTime,
     leaveTeam,
     joining,
     error,
@@ -53,6 +55,7 @@ const WeekendTeams: React.FC = () => {
   // 模态框状态
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamDetails | null>(null);
 
   /**
@@ -71,14 +74,24 @@ const WeekendTeams: React.FC = () => {
   };
 
   /**
-   * 处理加入队伍
+   * 打开加入队伍模态框
    */
-  const handleJoinTeam = async (team: TeamDetails) => {
+  const handleOpenJoinModal = (team: TeamDetails) => {
+    setSelectedTeam(team);
+    setJoinModalVisible(true);
+  };
+
+  /**
+   * 处理加入队伍（带个性化时间）
+   */
+  const handleJoinTeamWithTime = async (joinForm: any) => {
     try {
-      await joinTeam(team.objectId);
+      await joinTeamWithTime(joinForm);
+      setJoinModalVisible(false);
+      setSelectedTeam(null);
       message.success('已成功加入队伍！');
     } catch (error) {
-      message.error('加入队伍失败，请重试');
+      throw error; // 让JoinTeamModal处理错误显示
     }
   };
 
@@ -166,8 +179,8 @@ const WeekendTeams: React.FC = () => {
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
       <PageHeader
-        title="周末组队"
-        subtitle="创建或加入周末游戏组队，享受多人游戏的乐趣！"
+        title="游戏组队"
+        subtitle="创建或加入游戏组队，随时享受多人游戏的乐趣！"
         icon={<TeamOutlined />}
         extra={
           <Button 
@@ -186,7 +199,7 @@ const WeekendTeams: React.FC = () => {
           <Col>
             <Space>
               <CalendarOutlined />
-              <span>本周末组队活动</span>
+              <span>游戏组队活动</span>
             </Space>
           </Col>
           <Col>
@@ -279,9 +292,9 @@ const WeekendTeams: React.FC = () => {
                       type="primary" 
                       key="join"
                       loading={joining}
-                      onClick={() => handleJoinTeam(team)}
+                      onClick={() => handleOpenJoinModal(team)}
                     >
-                      加入队伍
+                      设置时间并加入
                     </Button>
                   ) : team.isCurrentUserMember ? (
                     <Button 
@@ -337,6 +350,18 @@ const WeekendTeams: React.FC = () => {
           // 离开成功后刷新列表
           fetchTeams();
         }}
+      />
+
+      {/* 加入组队模态框 */}
+      <JoinTeamModal
+        visible={joinModalVisible}
+        team={selectedTeam}
+        onCancel={() => {
+          setJoinModalVisible(false);
+          setSelectedTeam(null);
+        }}
+        onJoin={handleJoinTeamWithTime}
+        loading={joining}
       />
     </div>
   );

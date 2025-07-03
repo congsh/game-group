@@ -4,7 +4,7 @@
  */
 
 import AV from 'leancloud-storage';
-import { WeekendTeam, TeamForm, TeamFilters, TeamDetails } from '../types/team';
+import { WeekendTeam, TeamForm, TeamFilters, TeamDetails, JoinTeamForm, MemberTimeInfo } from '../types/team';
 import { Game } from '../types/game';
 import { initWeekendTeamTable, initSampleGames } from '../utils/initData';
 
@@ -65,6 +65,15 @@ export const createWeekendTeam = async (teamForm: TeamForm, leaderId: string): P
       throw new Error('缺少必要的组队信息（日期或时间）');
     }
 
+    // 创建队长的时间信息
+    const leaderTimeInfo: MemberTimeInfo = {
+      userId: leaderId,
+      username: leaderName,
+      startTime: teamForm.startTime,
+      endTime: teamForm.endTime,
+      joinedAt: new Date()
+    };
+
     // 创建组队记录
     const team = new AV.Object('WeekendTeam');
     team.set('game', teamForm.gameId);
@@ -75,6 +84,7 @@ export const createWeekendTeam = async (teamForm: TeamForm, leaderId: string): P
     team.set('leaderName', leaderName); // 保存队长昵称
     team.set('members', [leaderId]); // 队长自动加入成员列表
     team.set('memberNames', [leaderName]); // 保存成员昵称列表
+    team.set('memberTimeInfo', [leaderTimeInfo]); // 保存成员时间信息
     team.set('maxMembers', maxMembers);
     team.set('status', 'open');
 
@@ -99,6 +109,7 @@ export const createWeekendTeam = async (teamForm: TeamForm, leaderId: string): P
       endTime: result.get('endTime'),
       leader: result.get('leader'),
       members: result.get('members') || [],
+      memberTimeInfo: result.get('memberTimeInfo') || [leaderTimeInfo],
       maxMembers: result.get('maxMembers'),
       status: result.get('status'),
       createdAt: result.get('createdAt'),
@@ -219,6 +230,9 @@ export const getWeekendTeams = async (
         return savedMemberNames[index] || userMap.get(id) || `用户${id.slice(-6)}`;
       });
 
+      // 获取成员时间信息
+      const memberTimeInfo = team.get('memberTimeInfo') || [];
+
       return {
         objectId: team.id || '',
         game: gameId,
@@ -227,6 +241,7 @@ export const getWeekendTeams = async (
         endTime: team.get('endTime'),
         leader: leaderId,
         members: memberIds,
+        memberTimeInfo: memberTimeInfo,
         maxMembers: team.get('maxMembers'),
         status: team.get('status'),
         createdAt: team.get('createdAt'),
@@ -313,6 +328,7 @@ export const getWeekendTeamById = async (teamId: string): Promise<TeamDetails> =
       endTime: team.get('endTime'),
       leader: leaderId,
       members: memberIds,
+      memberTimeInfo: team.get('memberTimeInfo') || [],
       maxMembers: team.get('maxMembers'),
       status: team.get('status'),
       createdAt: team.get('createdAt'),
@@ -330,7 +346,66 @@ export const getWeekendTeamById = async (teamId: string): Promise<TeamDetails> =
 };
 
 /**
- * 加入组队
+ * 加入组队（带个性化时间）
+ * @param joinForm 加入表单数据
+ * @param userId 用户ID
+ * @returns 更新后的组队记录
+ */
+export const joinWeekendTeamWithTime = async (joinForm: JoinTeamForm, userId: string): Promise<WeekendTeam> => {
+  try {
+    // 获取当前用户昵称
+    const currentUser = AV.User.current();
+    const userName = currentUser?.get('username') || `用户${userId.slice(-6)}`;
+    
+    // 创建用户的时间信息
+    const userTimeInfo: MemberTimeInfo = {
+      userId: userId,
+      username: userName,
+      startTime: joinForm.startTime,
+      endTime: joinForm.endTime,
+      joinedAt: new Date()
+    };
+
+    const team = AV.Object.createWithoutData('WeekendTeam', joinForm.teamId);
+    
+    // 原子操作：添加成员和时间信息
+    team.addUnique('members', userId);
+    team.addUnique('memberNames', userName);
+    team.addUnique('memberTimeInfo', userTimeInfo);
+    
+    const result = await team.save();
+
+    // 检查是否需要更新状态为满员
+    const members = result.get('members') || [];
+    const maxMembers = result.get('maxMembers');
+    
+    if (members.length >= maxMembers) {
+      team.set('status', 'full');
+      await team.save();
+    }
+
+    return {
+      objectId: result.id || '',
+      game: result.get('game'),
+      eventDate: result.get('eventDate'),
+      startTime: result.get('startTime'),
+      endTime: result.get('endTime'),
+      leader: result.get('leader'),
+      members: result.get('members') || [],
+      memberTimeInfo: result.get('memberTimeInfo') || [],
+      maxMembers: result.get('maxMembers'),
+      status: result.get('status'),
+      createdAt: result.get('createdAt'),
+      updatedAt: result.get('updatedAt'),
+    };
+  } catch (error) {
+    console.error('加入组队失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 加入组队（兼容旧版本，使用队长时间）
  * @param teamId 组队ID
  * @param userId 用户ID
  * @returns 更新后的组队记录
@@ -366,6 +441,7 @@ export const joinWeekendTeam = async (teamId: string, userId: string): Promise<W
       endTime: result.get('endTime'),
       leader: result.get('leader'),
       members: result.get('members') || [],
+      memberTimeInfo: result.get('memberTimeInfo') || [],
       maxMembers: result.get('maxMembers'),
       status: result.get('status'),
       createdAt: result.get('createdAt'),
@@ -439,6 +515,7 @@ export const leaveWeekendTeam = async (teamId: string, userId: string): Promise<
       endTime: result.get('endTime'),
       leader: result.get('leader'),
       members: result.get('members') || [],
+      memberTimeInfo: result.get('memberTimeInfo') || [],
       maxMembers: result.get('maxMembers'),
       status: result.get('status'),
       createdAt: result.get('createdAt'),
@@ -603,6 +680,7 @@ export const getRecommendedTeams = async (userId: string): Promise<TeamDetails[]
         endTime: team.get('endTime'),
         leader: team.get('leader'),
         members: team.get('members') || [],
+        memberTimeInfo: team.get('memberTimeInfo') || [],
         maxMembers: team.get('maxMembers'),
         status: team.get('status'),
         createdAt: team.get('createdAt'),
