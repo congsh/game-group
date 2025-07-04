@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>存储功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #40a9ff;
+        }
+        .output {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #1890ff;
+        }
+        .success { border-left-color: #52c41a; }
+        .error { border-left-color: #ff4d4f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 游戏组队平台 - 存储功能测试</h1>
+        
+        <h2>测试localStorage功能</h2>
+        <div>
+            <button onclick="testBasicStorage()">🧪 基础存储测试</button>
+            <button onclick="testEncryption()">🔐 加密存储测试</button>
+            <button onclick="checkCurrentStorage()">📋 检查当前存储</button>
+            <button onclick="clearStorage()">🗑️ 清空存储</button>
+        </div>
+        
+        <div id="output" class="output">
+            测试结果将显示在这里...
+        </div>
+        
+        <h2>自动登录测试步骤</h2>
+        <ol>
+            <li>先清空当前存储</li>
+            <li>在应用中登录并选择"记住我"</li>
+            <li>刷新页面检查是否自动登录</li>
+            <li>返回此页面查看存储内容</li>
+        </ol>
+        
+        <h2>浏览器支持检查</h2>
+        <div>
+            <button onclick="checkBrowserSupport()">🌐 检查浏览器支持</button>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
+            output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        function testBasicStorage() {
+            clearOutput();
+            log('🧪 开始基础存储测试...');
+            
+            try {
+                // 测试localStorage
+                const testKey = 'test_basic_storage';
+                const testValue = 'Hello World - ' + Date.now();
+                
+                localStorage.setItem(testKey, testValue);
+                const retrieved = localStorage.getItem(testKey);
+                
+                if (retrieved === testValue) {
+                    log('✅ localStorage 基础读写功能正常', 'success');
+                } else {
+                    log('❌ localStorage 读写异常', 'error');
+                }
+                
+                // 清理测试数据
+                localStorage.removeItem(testKey);
+                log('🧹 测试数据已清理');
+                
+            } catch (error) {
+                log('❌ localStorage 测试失败: ' + error.message, 'error');
+            }
+        }
+
+        function testEncryption() {
+            clearOutput();
+            log('🔐 开始加密存储测试...');
+            
+            // 模拟加密存储（简化版本）
+            try {
+                const testData = {
+                    user: {
+                        objectId: 'test123',
+                        username: '测试用户',
+                        favoriteGames: []
+                    },
+                    timestamp: Date.now(),
+                    rememberMe: true
+                };
+                
+                // 简单的base64编码模拟加密
+                const encoded = btoa(JSON.stringify(testData));
+                localStorage.setItem('test_encryption', encoded);
+                
+                // 尝试解码
+                const retrieved = localStorage.getItem('test_encryption');
+                const decoded = JSON.parse(atob(retrieved));
+                
+                if (decoded.user.username === testData.user.username) {
+                    log('✅ 加密存储模拟测试成功', 'success');
+                    log('📄 存储的数据: ' + JSON.stringify(decoded, null, 2));
+                } else {
+                    log('❌ 加密存储测试失败', 'error');
+                }
+                
+                // 清理
+                localStorage.removeItem('test_encryption');
+                
+            } catch (error) {
+                log('❌ 加密存储测试异常: ' + error.message, 'error');
+            }
+        }
+
+        function checkCurrentStorage() {
+            clearOutput();
+            log('📋 检查当前存储状态...');
+            
+            // 检查游戏组队平台的存储
+            const authKey = 'game_group_auth';
+            const localAuth = localStorage.getItem(authKey);
+            const sessionAuth = sessionStorage.getItem(authKey);
+            
+            log('🔍 localStorage 中的认证数据: ' + (localAuth ? '存在' : '不存在'));
+            if (localAuth) {
+                log('📦 localStorage 数据长度: ' + localAuth.length + ' 字符');
+                log('📦 localStorage 原始数据: ' + localAuth.substring(0, 100) + '...');
+            }
+            
+            log('🔍 sessionStorage 中的认证数据: ' + (sessionAuth ? '存在' : '不存在'));
+            if (sessionAuth) {
+                log('📦 sessionStorage 数据长度: ' + sessionAuth.length + ' 字符');
+            }
+            
+            // 列出所有存储的键
+            log('📝 localStorage 中的所有键:');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                log('  - ' + key);
+            }
+        }
+
+        function clearStorage() {
+            clearOutput();
+            log('🗑️ 清空存储...');
+            
+            const authKey = 'game_group_auth';
+            localStorage.removeItem(authKey);
+            sessionStorage.removeItem(authKey);
+            
+            log('✅ 认证相关存储已清空', 'success');
+            log('💡 现在可以测试重新登录功能了');
+        }
+
+        function checkBrowserSupport() {
+            clearOutput();
+            log('🌐 检查浏览器支持...');
+            
+            // 检查localStorage支持
+            if (typeof(Storage) !== "undefined") {
+                log('✅ localStorage 支持正常', 'success');
+            } else {
+                log('❌ 浏览器不支持localStorage', 'error');
+            }
+            
+            // 检查sessionStorage支持
+            if (typeof(sessionStorage) !== "undefined") {
+                log('✅ sessionStorage 支持正常', 'success');
+            } else {
+                log('❌ 浏览器不支持sessionStorage', 'error');
+            }
+            
+            // 检查crypto支持（用于加密）
+            if (typeof(btoa) !== "undefined" && typeof(atob) !== "undefined") {
+                log('✅ Base64 编码支持正常', 'success');
+            } else {
+                log('❌ Base64 编码不支持', 'error');
+            }
+            
+            // 检查JSON支持
+            if (typeof(JSON) !== "undefined") {
+                log('✅ JSON 支持正常', 'success');
+            } else {
+                log('❌ JSON 不支持', 'error');
+            }
+        }
+
+        // 页面加载时自动检查
+        window.onload = function() {
+            log('🎉 存储功能测试页面已加载');
+            log('💡 点击上方按钮开始测试');
+        };
+    </script>
+</body>
+</html> 

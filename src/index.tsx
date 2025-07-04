@@ -4,36 +4,45 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { initLeanCloud, checkLeanCloudConfig } from './services/leancloud';
-import { warmupCaches } from './services/dataCache';
+import { appInitManager } from './utils/app-init';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
-// 初始化 LeanCloud
-if (checkLeanCloudConfig()) {
-  initLeanCloud();
-  
-  // 预热数据缓存
-  console.log('正在预热数据缓存...');
-  warmupCaches()
-    .then(() => {
-      console.log('数据缓存预热完成');
-      
-      // 预热完整游戏列表（为投票和组队页面准备）
-      import('./services/games').then(({ getAllGames }) => {
-        getAllGames()
-          .then(games => console.log(`完整游戏列表已加载，共 ${games.length} 个游戏`))
-          .catch(err => console.log('完整游戏列表加载失败:', err));
-      });
-    })
-    .catch(err => console.error('数据缓存预热失败:', err));
-}
+// 使用初始化管理器进行全局初始化
+const initializeGlobal = async () => {
+  if (!checkLeanCloudConfig()) {
+    console.error('❌ LeanCloud 配置缺失');
+    return;
+  }
 
+  // LeanCloud 初始化
+  await appInitManager.safeInit('leanCloudInit', () => {
+    initLeanCloud();
+  }, 'LeanCloud初始化');
+
+  // 数据缓存预热
+  await appInitManager.safeInit('cacheWarmup', async () => {
+    const { warmupCaches } = await import('./services/dataCache');
+    await warmupCaches();
+    
+    // 预热完整游戏列表
+    const { getAllGames } = await import('./services/games');
+    const games = await getAllGames();
+    console.log(`🎮 完整游戏列表已加载，共 ${games.length} 个游戏`);
+  }, '数据缓存预热');
+};
+
+// 执行全局初始化
+initializeGlobal().catch(error => {
+  console.error('❌ 全局初始化失败:', error);
+});
+
+// 注意：暂时移除React.StrictMode以避免开发环境下的重复操作
+// 在生产环境中可以重新启用
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <App />
 );
 
 // If you want to start measuring performance in your app, pass a function

@@ -3,11 +3,13 @@
 ## 1. 开发环境搭建
 
 ### 1.1 环境要求
+
 - Node.js >= 16.0.0
 - npm >= 8.0.0 或 yarn >= 1.22.0
 - Git
 
 ### 1.2 LeanCloud 配置
+
 1. 注册 LeanCloud 账号：https://leancloud.cn/
 2. 创建新应用，获取以下信息：
    - App ID
@@ -15,6 +17,7 @@
    - Server URL (国际版需要)
 
 ### 1.3 项目初始化
+
 ```bash
 # 克隆项目
 git clone <repository-url>
@@ -31,43 +34,99 @@ cp .env.example .env.local
 ## 2. 开发计划
 
 ### 阶段一：项目基础搭建（第1-2天）
-- [x] 项目文档创建
-- [ ] React 项目初始化
-- [ ] 基础目录结构搭建
-- [ ] LeanCloud SDK 集成
-- [ ] 基础路由配置
-- [ ] UI 框架集成
+
+- [X] 项目文档创建
+- [X] React 项目初始化
+- [X] 基础目录结构搭建
+- [X] LeanCloud SDK 集成
+- [X] 基础路由配置
+- [X] UI 框架集成
 
 ### 阶段二：用户系统（第3-4天）
-- [ ] 用户登录页面
-- [ ] 登录逻辑实现
-- [ ] 用户状态管理
-- [ ] 登录鉴权中间件
+
+- [X] 用户登录页面
+- [X] 登录逻辑实现
+- [X] 用户状态管理
+- [X] 登录鉴权中间件
 
 ### 阶段三：游戏库模块（第5-7天）
-- [ ] 游戏列表页面
-- [ ] 游戏添加/编辑表单
-- [ ] 游戏删除功能
-- [ ] 批量导入功能
-- [ ] 收藏/点赞功能
+
+- [X] 游戏列表页面
+- [X] 游戏添加/编辑表单
+- [X] 游戏删除功能
+- [X] 批量导入功能
+- [X] 收藏/点赞功能
 
 ### 阶段四：每日投票模块（第8-9天）
-- [ ] 投票页面UI
-- [ ] 投票逻辑实现
-- [ ] 投票结果统计
-- [ ] 每日重置机制
+
+- [X] 投票页面UI
+- [X] 投票逻辑实现
+- [X] 投票结果统计
+- [X] 每日重置机制
 
 ### 阶段五：周末组队模块（第10-12天）
-- [ ] 组队创建页面
-- [ ] 组队列表展示
-- [ ] 组队加入功能
-- [ ] 智能匹配推荐
 
-### 阶段六：优化与部署（第13-14天）
-- [ ] 响应式优化
-- [ ] 性能优化
+- [X] 组队创建页面
+- [X] 组队列表展示
+- [X] 组队加入功能
+- [X] 智能匹配推荐
+
+### 阶段六：功能增强（第13-15天）
+
+- [X] 报表功能系统
+- [X] 数据可视化
+- [X] 响应式优化
+- [X] 性能优化
+
+### 阶段七：新功能开发第一批（当前阶段）
+
+#### 7.1 登录持久化与投票优化（1天）
+- [ ] 实现登录信息本地存储
+- [ ] 添加自动登录功能
+- [ ] 优化投票列表展示
+- [ ] 添加投票记录滚动加载
+
+#### 7.2 个人中心模块（2天）
+- [ ] 创建个人中心页面路由
+- [ ] 实现基本信息展示
+- [ ] 开发历史投票模块
+- [ ] 开发组队历史模块
+- [ ] 实现收藏游戏管理
+- [ ] 添加个人数据统计
+
+#### 7.3 定时归档系统（2天）
+- [ ] 设计归档数据模型
+- [ ] 开发LeanCloud云函数
+- [ ] 实现归档任务调度
+- [ ] 创建归档数据查询API
+- [ ] 添加归档数据展示页面
+
+### 阶段八：新功能开发第二批
+
+#### 8.1 分享功能（1.5天）
+- [ ] 实现分享链接生成
+- [ ] 开发分享页面组件
+- [ ] 添加社交媒体集成
+- [ ] 实现访问统计功能
+
+#### 8.2 文件上传系统（2天）
+- [ ] 集成上传组件
+- [ ] 实现文件存储服务
+- [ ] 添加文件管理功能
+- [ ] 实现安全验证机制
+
+#### 8.3 组件优化与类型检查（1.5天）
+- [ ] 提取通用组件
+- [ ] 优化组件复用性
+- [ ] 增强类型定义
+- [ ] 添加运行时验证
+
+### 阶段九：部署与优化（第20-21天）
+
 - [ ] 错误处理完善
 - [ ] EdgeOne 部署配置
+- [ ] 性能测试与优化
+- [ ] 用户体验优化
 
 ## 3. 目录结构
 
@@ -125,12 +184,14 @@ src/
 ## 4. 开发规范
 
 ### 4.1 代码规范
+
 - 使用 TypeScript 严格模式
 - 组件名使用 PascalCase
 - 文件名使用 PascalCase（组件）或 camelCase（工具函数）
 - 使用 ESLint + Prettier 格式化代码
 
 ### 4.2 组件规范
+
 ```typescript
 // 组件文件结构示例
 import React from 'react';
@@ -164,6 +225,7 @@ export const GameCard: React.FC<GameCardProps> = ({
 ```
 
 ### 4.3 API 调用规范
+
 ```typescript
 // API服务示例
 import AV from 'leancloud-storage';
@@ -180,7 +242,7 @@ export const getGames = async (page = 1, limit = 20): Promise<Game[]> => {
     query.skip((page - 1) * limit);
     query.limit(limit);
     query.descending('createdAt');
-    
+  
     const results = await query.find();
     return results.map(item => ({
       objectId: item.id,
@@ -197,6 +259,7 @@ export const getGames = async (page = 1, limit = 20): Promise<Game[]> => {
 ```
 
 ### 4.4 状态管理规范
+
 ```typescript
 // Zustand store示例
 import { create } from 'zustand';
@@ -237,113 +300,389 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 }));
 ```
 
-## 5. 关键技术实现
+## 5. 新功能技术实现指南
 
-### 5.1 昵称登录实现
+### 5.1 登录持久化实现
+
 ```typescript
-/**
- * 昵称登录逻辑
- * 1. 检查昵称是否已存在
- * 2. 存在则直接登录，不存在则创建新用户
- */
-export const loginWithNickname = async (nickname: string): Promise<User> => {
-  try {
-    // 尝试查找已存在的用户
-    const query = new AV.Query(AV.User);
-    query.equalTo('username', nickname);
-    const existingUser = await query.first();
+// utils/auth-storage.ts
+import CryptoJS from 'crypto-js';
+
+const AUTH_KEY = 'game_group_auth';
+const SECRET_KEY = process.env.REACT_APP_SECRET_KEY || 'default_secret';
+
+export const authStorage = {
+  // 保存登录信息
+  saveAuth: (user: User, rememberMe: boolean = false) => {
+    const data = {
+      user,
+      timestamp: Date.now(),
+      rememberMe
+    };
     
-    if (existingUser) {
-      // 用户已存在，直接登录
-      await AV.User.logIn(nickname, 'default_password');
-      return existingUser;
+    const encrypted = CryptoJS.AES.encrypt(
+      JSON.stringify(data), 
+      SECRET_KEY
+    ).toString();
+    
+    if (rememberMe) {
+      localStorage.setItem(AUTH_KEY, encrypted);
     } else {
-      // 用户不存在，创建新用户
-      const user = new AV.User();
-      user.setUsername(nickname);
-      user.setPassword('default_password'); // 使用默认密码
-      await user.signUp();
-      return user;
+      sessionStorage.setItem(AUTH_KEY, encrypted);
     }
-  } catch (error) {
-    throw new Error(`登录失败: ${error.message}`);
+  },
+  
+  // 获取登录信息
+  getAuth: (): User | null => {
+    const encrypted = localStorage.getItem(AUTH_KEY) || 
+                     sessionStorage.getItem(AUTH_KEY);
+    
+    if (!encrypted) return null;
+    
+    try {
+      const decrypted = CryptoJS.AES.decrypt(encrypted, SECRET_KEY);
+      const data = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
+      
+      // 检查是否过期（7天）
+      if (Date.now() - data.timestamp > 7 * 24 * 60 * 60 * 1000) {
+        authStorage.clearAuth();
+        return null;
+      }
+      
+      return data.user;
+    } catch (error) {
+      console.error('解密失败:', error);
+      return null;
+    }
+  },
+  
+  // 清除登录信息
+  clearAuth: () => {
+    localStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem(AUTH_KEY);
   }
 };
 ```
 
-### 5.2 批量导入实现
-```typescript
-/**
- * 批量导入游戏
- * 支持CSV和JSON格式
- */
-export const batchImportGames = async (
-  file: File, 
-  format: 'csv' | 'json'
-): Promise<void> => {
-  const text = await file.text();
-  let games: Partial<Game>[] = [];
-  
-  if (format === 'csv') {
-    games = parseCSV(text);
-  } else {
-    games = JSON.parse(text);
-  }
-  
-  // 云函数批量处理
-  const result = await AV.Cloud.run('batchCreateGames', { games });
-  return result;
-};
-```
+### 5.2 投票列表虚拟滚动
 
-### 5.3 智能推荐算法
 ```typescript
-/**
- * 周末组队智能推荐
- * 基于用户收藏游戏和时间匹配
- */
-export const getRecommendedTeams = async (userId: string): Promise<WeekendTeam[]> => {
-  // 获取用户收藏的游戏
-  const user = await getUserById(userId);
-  const favoriteGameIds = user.favoriteGames || [];
+// components/common/VirtualList.tsx
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+interface VirtualListProps<T> {
+  items: T[];
+  height: number;
+  renderItem: (item: T, index: number) => React.ReactNode;
+  itemHeight?: number;
+}
+
+export function VirtualList<T>({ 
+  items, 
+  height, 
+  renderItem,
+  itemHeight = 60 
+}: VirtualListProps<T>) {
+  const parentRef = useRef<HTMLDivElement>(null);
   
-  // 查询相关游戏的组队
-  const query = new AV.Query('WeekendTeam');
-  query.containedIn('game', favoriteGameIds);
-  query.equalTo('status', 'open');
-  query.include(['game', 'leader']);
-  
-  const teams = await query.find();
-  
-  // 按推荐分数排序
-  return teams.sort((a, b) => {
-    const scoreA = calculateRecommendScore(a, user);
-    const scoreB = calculateRecommendScore(b, user);
-    return scoreB - scoreA;
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => itemHeight,
+    overscan: 5
   });
+  
+  return (
+    <div ref={parentRef} style={{ height, overflow: 'auto' }}>
+      <div style={{ height: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((virtualItem) => (
+          <div
+            key={virtualItem.key}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: `${virtualItem.size}px`,
+              transform: `translateY(${virtualItem.start}px)`
+            }}
+          >
+            {renderItem(items[virtualItem.index], virtualItem.index)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### 5.3 个人中心数据聚合
+
+```typescript
+// services/profile.ts
+export const profileService = {
+  // 获取用户统计数据
+  getUserStats: async (userId: string) => {
+    const [votes, teams, favorites] = await Promise.all([
+      // 获取投票历史
+      new AV.Query('DailyVote')
+        .equalTo('user', userId)
+        .descending('createdAt')
+        .limit(1000)
+        .find(),
+      
+      // 获取组队历史
+      new AV.Query('WeekendTeam')
+        .containedIn('members', [userId])
+        .include(['game'])
+        .descending('createdAt')
+        .find(),
+      
+      // 获取收藏游戏
+      new AV.Query('UserFavorite')
+        .equalTo('user', userId)
+        .include(['game'])
+        .find()
+    ]);
+    
+    return {
+      totalVotes: votes.length,
+      voteHistory: votes.map(formatVote),
+      totalTeams: teams.length,
+      teamHistory: teams.map(formatTeam),
+      favoriteGames: favorites.map(f => f.get('game'))
+    };
+  },
+  
+  // 获取游戏偏好分析
+  getGamePreferences: async (userId: string) => {
+    const votes = await new AV.Query('DailyVote')
+      .equalTo('user', userId)
+      .descending('createdAt')
+      .limit(100)
+      .find();
+    
+    // 统计游戏出现频率
+    const gameFrequency = new Map<string, number>();
+    votes.forEach(vote => {
+      const games = vote.get('selectedGames') || [];
+      games.forEach((gameId: string) => {
+        gameFrequency.set(gameId, (gameFrequency.get(gameId) || 0) + 1);
+      });
+    });
+    
+    // 转换为排序数组
+    return Array.from(gameFrequency.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+  }
+};
+```
+
+### 5.4 定时归档云函数
+
+```javascript
+// cloud/functions/dailyArchive.js
+AV.Cloud.define('dailyArchive', async (request) => {
+  const yesterday = moment().subtract(1, 'day').format('YYYY-MM-DD');
+  
+  // 检查是否已归档
+  const existing = await new AV.Query('DailyArchive')
+    .equalTo('date', yesterday)
+    .first();
+  
+  if (existing) {
+    return { message: '已存在归档数据' };
+  }
+  
+  // 获取昨日投票数据
+  const votes = await new AV.Query('DailyVote')
+    .equalTo('date', yesterday)
+    .include(['user'])
+    .limit(1000)
+    .find();
+  
+  // 获取昨日组队数据
+  const teams = await new AV.Query('WeekendTeam')
+    .equalTo('eventDate', yesterday)
+    .include(['game', 'leader'])
+    .find();
+  
+  // 统计数据
+  const voteStats = calculateVoteStats(votes);
+  const teamStats = calculateTeamStats(teams);
+  
+  // 创建归档记录
+  const archive = new AV.Object('DailyArchive');
+  archive.set('date', yesterday);
+  archive.set('voteSnapshot', voteStats);
+  archive.set('teamSnapshot', teamStats);
+  
+  await archive.save();
+  
+  return { 
+    message: '归档成功',
+    date: yesterday,
+    voteCount: votes.length,
+    teamCount: teams.length
+  };
+});
+
+// 设置定时任务
+AV.Cloud.useMasterKey();
+AV.Cloud.startJob('dailyArchiveJob', {
+  cronTime: '0 0 * * *', // 每天00:00执行
+  job: 'dailyArchive'
+});
+```
+
+### 5.5 分享链接生成
+
+```typescript
+// utils/share.ts
+import { nanoid } from 'nanoid';
+
+export const shareUtils = {
+  // 生成分享链接
+  generateShareLink: async (type: string, targetId: string) => {
+    const shareId = nanoid(8); // 8位随机ID
+    
+    const shareLink = new AV.Object('ShareLink');
+    shareLink.set('shareId', shareId);
+    shareLink.set('type', type);
+    shareLink.set('targetId', targetId);
+    shareLink.set('viewCount', 0);
+    shareLink.set('createdBy', AV.User.current()?.id);
+    
+    await shareLink.save();
+    
+    return {
+      shareId,
+      url: `${window.location.origin}/share/${shareId}`,
+      shortUrl: `${window.location.host}/s/${shareId}`
+    };
+  },
+  
+  // 复制到剪贴板
+  copyToClipboard: async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success('链接已复制到剪贴板');
+    } catch (error) {
+      // 降级方案
+      const input = document.createElement('input');
+      input.value = text;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      message.success('链接已复制');
+    }
+  },
+  
+  // 分享到社交媒体
+  shareToSocial: (platform: string, url: string, title: string) => {
+    const shareUrls = {
+      weibo: `https://service.weibo.com/share/share.php?url=${url}&title=${title}`,
+      qq: `https://connect.qq.com/widget/shareqq/index.html?url=${url}&title=${title}`,
+      wechat: `weixin://dl/business/?url=${url}` // 需要微信SDK
+    };
+    
+    window.open(shareUrls[platform], '_blank');
+  }
+};
+```
+
+### 5.6 文件上传服务
+
+```typescript
+// services/upload.ts
+import { RcFile } from 'antd/lib/upload';
+import imageCompression from 'browser-image-compression';
+
+export const uploadService = {
+  // 上传图片
+  uploadImage: async (file: RcFile, options?: {
+    maxSizeMB?: number;
+    maxWidthOrHeight?: number;
+  }) => {
+    // 图片压缩
+    const compressedFile = await imageCompression(file, {
+      maxSizeMB: options?.maxSizeMB || 2,
+      maxWidthOrHeight: options?.maxWidthOrHeight || 1920,
+      useWebWorker: true
+    });
+    
+    // 创建AV文件对象
+    const avFile = new AV.File(file.name, compressedFile);
+    
+    // 设置文件元数据
+    avFile.metaData('owner', AV.User.current()?.id);
+    avFile.metaData('uploadTime', new Date().toISOString());
+    
+    // 上传文件
+    const savedFile = await avFile.save();
+    
+    // 保存文件记录
+    const fileRecord = new AV.Object('FileUpload');
+    fileRecord.set('filename', file.name);
+    fileRecord.set('url', savedFile.url());
+    fileRecord.set('size', compressedFile.size);
+    fileRecord.set('mimeType', compressedFile.type);
+    fileRecord.set('uploadedBy', AV.User.current()?.id);
+    
+    await fileRecord.save();
+    
+    return {
+      id: fileRecord.id,
+      url: savedFile.url(),
+      thumbnail: savedFile.thumbnailURL(200, 200)
+    };
+  },
+  
+  // 验证文件
+  validateFile: (file: RcFile): Promise<boolean> => {
+    const isImage = file.type.startsWith('image/');
+    if (!isImage) {
+      message.error('只能上传图片文件！');
+      return Promise.reject(false);
+    }
+    
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      message.error('图片大小不能超过 5MB！');
+      return Promise.reject(false);
+    }
+    
+    return Promise.resolve(true);
+  }
 };
 ```
 
 ## 6. 测试策略
 
 ### 6.1 单元测试
+
 - 使用 Jest + React Testing Library
 - 组件渲染测试
 - 用户交互测试
 - API 调用 Mock 测试
 
 ### 6.2 集成测试
+
 - 页面流程测试
 - 用户登录流程测试
 - 数据 CRUD 操作测试
 
 ### 6.3 端到端测试
+
 - 使用 Cypress 进行 E2E 测试
 - 关键用户流程自动化测试
 
 ## 7. 部署配置
 
 ### 7.1 构建优化
+
 ```json
 // package.json 构建脚本
 {
@@ -356,6 +695,7 @@ export const getRecommendedTeams = async (userId: string): Promise<WeekendTeam[]
 ```
 
 ### 7.2 EdgeOne 部署
+
 1. 执行 `npm run build` 生成构建文件
 2. 登录腾讯云 EdgeOne 控制台
 3. 创建站点并配置静态托管
@@ -363,6 +703,7 @@ export const getRecommendedTeams = async (userId: string): Promise<WeekendTeam[]
 5. 配置自定义域名和 HTTPS
 
 ### 7.3 环境变量配置
+
 ```bash
 # .env.production
 REACT_APP_LEANCLOUD_APP_ID=your_app_id
@@ -374,11 +715,13 @@ REACT_APP_ENV=production
 ## 8. 常见问题解决
 
 ### 8.1 LeanCloud 相关
+
 - **跨域问题**: 在 LeanCloud 控制台配置允许的域名
 - **API 调用失败**: 检查 App ID 和 App Key 是否正确
 - **权限错误**: 确认数据表的 ACL 设置
 
 ### 8.2 开发环境
+
 - **依赖安装失败**: 清除 node_modules 重新安装
 - **端口冲突**: 修改 package.json 中的启动端口
 - **TypeScript 错误**: 检查类型定义是否正确
@@ -386,6 +729,7 @@ REACT_APP_ENV=production
 ## 9. 性能优化
 
 ### 9.1 代码分割
+
 ```typescript
 // 路由懒加载
 const Games = lazy(() => import('../pages/Games/Games'));
@@ -394,6 +738,7 @@ const WeekendTeams = lazy(() => import('../pages/WeekendTeams/WeekendTeams'));
 ```
 
 ### 9.2 数据缓存
+
 ```typescript
 // React Query 数据缓存
 export const useGames = () => {
@@ -408,4 +753,4 @@ export const useGames = () => {
 
 ---
 
-本开发文档将随着项目进展持续更新，确保开发团队有明确的指导和参考。 
+本开发文档将随着项目进展持续更新，确保开发团队有明确的指导和参考。

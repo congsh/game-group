@@ -19,9 +19,9 @@ import {
   Tag,
   Alert,
   Spin,
-  message,
   Rate,
-  Input
+  Input,
+  App
 } from 'antd';
 import {
   TrophyOutlined,
@@ -49,6 +49,7 @@ const { Option } = Select;
  */
 const DailyVote: React.FC = () => {
   const [form] = Form.useForm<VoteForm>();
+  const { message } = App.useApp(); // 使用动态message API
   
   // 投票状态
   const {
@@ -849,7 +850,9 @@ const DailyVote: React.FC = () => {
                 {todayStats.topGames.length > 0 && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <Title level={4} style={{ margin: 0 }}>今日热门游戏</Title>
+                      <Title level={4} style={{ margin: 0 }}>
+                        今日热门游戏 ({todayStats.topGames.length}个)
+                      </Title>
                       <Select
                         size="small"
                         value={voteSortBy}
@@ -861,37 +864,45 @@ const DailyVote: React.FC = () => {
                         <Option value="gameName">🔤 名称</Option>
                       </Select>
                     </div>
-                    <List
-                      size="small"
-                      dataSource={getSortedTopGames().slice(0, 5)}
-                      renderItem={(game, index) => (
-                        <List.Item>
-                          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                            <Space>
-                              <Tag 
-                                color={index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? '#cd7f32' : 'default'}
-                              >
-                                #{index + 1}
-                              </Tag>
-                              <Text 
-                                strong 
-                                style={{ cursor: 'pointer', color: '#1890ff' }}
-                                onClick={() => handleGameClick(game.gameId, game.gameName)}
-                              >
-                                {game.gameName}
-                              </Text>
-                              <Text type="secondary">{game.voteCount} 票</Text>
-                            </Space>
-                            {game.averageTendency && (
+                    <div style={{ 
+                      maxHeight: '400px', 
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      border: '1px solid #f0f0f0',
+                      borderRadius: '6px'
+                    }}>
+                      <List
+                        size="small"
+                        dataSource={getSortedTopGames()}
+                        renderItem={(game, index) => (
+                          <List.Item>
+                            <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                               <Space>
-                                <StarOutlined style={{ color: '#faad14' }} />
-                                <Text type="secondary">{game.averageTendency.toFixed(1)}分</Text>
+                                <Tag 
+                                  color={index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? '#cd7f32' : 'default'}
+                                >
+                                  #{index + 1}
+                                </Tag>
+                                <Text 
+                                  strong 
+                                  style={{ cursor: 'pointer', color: '#1890ff' }}
+                                  onClick={() => handleGameClick(game.gameId, game.gameName)}
+                                >
+                                  {game.gameName}
+                                </Text>
+                                <Text type="secondary">{game.voteCount} 票</Text>
                               </Space>
-                            )}
-                          </Space>
-                        </List.Item>
-                      )}
-                    />
+                              {game.averageTendency && (
+                                <Space>
+                                  <StarOutlined style={{ color: '#faad14' }} />
+                                  <Text type="secondary">{game.averageTendency.toFixed(1)}分</Text>
+                                </Space>
+                              )}
+                            </Space>
+                          </List.Item>
+                        )}
+                      />
+                    </div>
                   </div>
                 )}
 
