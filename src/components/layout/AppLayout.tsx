@@ -67,8 +67,8 @@ const menuItems = [
   {
     key: '/teams',
     icon: <TeamOutlined />,
-    label: '周末组队',
-    title: '周末游戏组队'
+    label: '游戏组队',
+    title: '游戏组队'
   },
   {
     key: '/reports',
@@ -83,8 +83,9 @@ const breadcrumbMap: Record<string, string[]> = {
   '/': ['首页'],
   '/games': ['首页', '游戏库'],
   '/vote': ['首页', '每日投票'],
-  '/teams': ['首页', '周末组队'],
+  '/teams': ['首页', '游戏组队'],
   '/reports': ['首页', '数据报表'],
+  '/profile': ['首页', '个人中心'],
 };
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
@@ -136,7 +137,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: '个人资料',
+      label: '个人中心',
+      onClick: () => navigate('/profile'),
     },
     {
       key: 'settings',
