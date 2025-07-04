@@ -38,6 +38,7 @@ import { VoteForm, GamePreference } from '../../types/vote';
 import { initDailyVoteTable } from '../../utils/initData';
 import PageHeader from '../../components/common/PageHeader';
 import VoteDetailsModal from '../../components/ui/VoteDetailsModal';
+import { useAuthStore } from '../../store/auth';
 import './DailyVote.css';
 
 const { Title, Text } = Typography;
@@ -85,14 +86,32 @@ const DailyVote: React.FC = () => {
   const todayWantsToPlay = useTodayWantsToPlay();
   const todaySelectedGameIds = useTodaySelectedGames();
 
+  // 获取当前用户信息
+  const { user } = useAuthStore();
+
   /**
-   * 初始化页面数据
+   * 初始化页面数据，并校验缓存日期
    */
   useEffect(() => {
+    // 检查缓存中的投票记录是否为当天
+    const checkAndClearOldVoteCache = async () => {
+      if (!user?.objectId) return;
+      // 动态导入获取缓存投票的函数
+      const { getCachedTodayVote, clearVotesCaches } = await import('../../services/dataCache');
+      // 获取缓存投票（不一定是当天的）
+      const cachedVote = await getCachedTodayVote(user.objectId);
+      if (cachedVote && cachedVote.date !== new Date().toISOString().split('T')[0]) {
+        // 如果缓存不是今天的，清除投票缓存
+        clearVotesCaches();
+        // 可选：提示用户缓存已自动清理
+        console.log('检测到旧缓存，已自动清除投票缓存');
+      }
+    };
+    checkAndClearOldVoteCache();
     loadTodayVote();
     loadTodayStats();
     fetchAllGames();
-  }, [loadTodayVote, loadTodayStats, fetchAllGames]);
+  }, [loadTodayVote, loadTodayStats, fetchAllGames, user]);
 
   /**
    * 同步投票状态到表单
