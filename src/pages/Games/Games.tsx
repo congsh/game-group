@@ -55,6 +55,7 @@ import type { Game, GameForm as GameFormType } from '../../types/game';
 
 import { BatchImportModal } from '../../components/ui/BatchImportModal';
 import PageHeader from '../../components/common/PageHeader';
+import { ExportButton } from '../../components/common/ExportButton';
 import './Games.css';
 
 const { Search } = Input;
@@ -458,7 +459,10 @@ export const Games: React.FC = () => {
     fetchTypes,
     fetchFavoriteGames,
     clearError,
-    batchImportGames
+    batchImportGames,
+    allGames,
+    allGamesLoading,
+    fetchAllGames
   } = useGameStore();
 
   const [gameFormVisible, setGameFormVisible] = useState(false);
@@ -639,12 +643,47 @@ export const Games: React.FC = () => {
     return await batchImportGames(games);
   };
 
+  /**
+   * 导出游戏数据为可直接导入的CSV格式
+   */
+  const getExportGamesData = () => {
+    return allGames.map(game => ({
+      name: game.name,
+      minPlayers: game.minPlayers,
+      maxPlayers: game.maxPlayers,
+      platform: game.platform || '',
+      type: game.type || '',
+      description: game.description || ''
+    }));
+  };
+
   return (
     <div className="games-page-modern">
       <PageHeader
         title="游戏库"
-        subtitle="发现和管理你喜欢的游戏"
-        icon={<RocketOutlined />}
+        subtitle="管理和发现你喜欢的游戏，支持批量导入/导出"
+        icon={<DatabaseOutlined />}
+        extra={
+          <Space>
+            <ExportButton
+              data={getExportGamesData()}
+              filename="games-export"
+              buttonText="导出CSV"
+              type="primary"
+              size="middle"
+              dataProcessor={undefined}
+              disabled={allGames.length === 0}
+            />
+            <Button 
+              type="primary" 
+              size="middle"
+              onClick={() => setBatchImportVisible(true)}
+              icon={<DatabaseOutlined />}
+            >
+              批量导入游戏
+            </Button>
+          </Space>
+        }
       />
 
       {/* 统计面板 */}
