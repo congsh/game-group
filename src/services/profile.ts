@@ -99,15 +99,14 @@ class ProfileService {
   private async getVoteStats(userId: string, dateRange?: [Date, Date]): Promise<Partial<UserStats>> {
     try {
       const query = new AV.Query('DailyVote');
-      query.equalTo('user', AV.Object.createWithoutData('_User', userId));
-      
+      query.equalTo('userId', userId);
+
       if (dateRange) {
         query.greaterThanOrEqualTo('createdAt', dateRange[0]);
         query.lessThanOrEqualTo('createdAt', dateRange[1]);
       }
 
       const votes = await query.find();
-      
       // 计算统计数据
       let totalVotes = 0;
       let totalRating = 0;
@@ -115,15 +114,15 @@ class ProfileService {
       const gameIds = new Set<string>();
 
       for (const vote of votes) {
-        const gameIds_attr = vote.get('gameIds') || [];
+        const gameIds_attr = vote.get('selectedGames') || [];
         const gamePreferences = vote.get('gamePreferences') || [];
-        
         totalVotes += gameIds_attr.length;
         
         // 统计评分
         for (const pref of gamePreferences) {
           if (pref.tendency) {
             totalRating += pref.tendency;
+            console.log('pref.tendency', pref.tendency);
             gameIds.add(pref.gameId);
           }
         }
@@ -136,7 +135,7 @@ class ProfileService {
         const games = await gameQuery.find();
         
         for (const game of games) {
-          const category = game.get('category') || '其他';
+          const category = game.get('type') || '其他';
           categoryCount[category] = (categoryCount[category] || 0) + 1;
         }
       }
@@ -146,8 +145,10 @@ class ProfileService {
         categoryCount[a] > categoryCount[b] ? a : b, '暂无数据'
       );
 
-      const averageRating = gameIds.size > 0 ? totalRating / gameIds.size : 0;
-
+      const averageRating = totalVotes > 0 ? totalRating / totalVotes : 0;
+      console.log('gameIds.size', gameIds.size);
+      console.log('totalRating', totalRating);
+      console.log('totalRating / totalVotes', totalRating / totalVotes);
       return {
         totalVotes,
         favoriteCategory,
@@ -360,7 +361,7 @@ class ProfileService {
   async getVoteHistory(userId: string, dateRange?: [Date, Date]): Promise<VoteHistoryItem[]> {
     try {
       const query = new AV.Query('DailyVote');
-      query.equalTo('user', AV.Object.createWithoutData('_User', userId));
+      query.equalTo('userId', userId);
       query.descending('createdAt');
       
       if (dateRange) {
@@ -399,17 +400,16 @@ class ProfileService {
         const date = vote.get('date');
         const createdAt = vote.get('createdAt');
         const gamePreferences = vote.get('gamePreferences') || [];
-        
-                 gamePreferences.forEach((pref: any) => {
-           voteItems.push({
-             id: `${vote.id}_${pref.gameId}`,
-             date: date || '',
-             gameName: gameMap.get(pref.gameId) || '未知游戏',
-             gameId: pref.gameId,
-             tendency: pref.tendency || 0,
-             createdAt: createdAt.toISOString()
-           });
-         });
+        gamePreferences.forEach((pref: any) => {
+          voteItems.push({
+            id: `${vote.id}_${pref.gameId}`,
+            date: date ? (date instanceof Date ? date.toISOString().split('T')[0] : date) : '',
+            gameName: gameMap.get(pref.gameId) || '未知游戏',
+            gameId: pref.gameId || '',
+            tendency: typeof pref.tendency === 'number' ? pref.tendency : 0,
+            createdAt: createdAt ? createdAt.toISOString() : ''
+          });
+        });
       });
 
       return voteItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -471,8 +471,8 @@ class ProfileService {
         const memberTimeInfos = team.get('memberTimeInfos') || [];
         const activity = team.get('activity');
         const gameId = team.get('game');
-        const date = team.get('date');
-        const time = team.get('time');
+        const dateObj = team.get('eventDate');
+        const timeObj = team.get('startTime');
         const createdAt = team.get('createdAt');
         let role: 'leader' | 'member' | null = null;
         if (leader === userId) {
@@ -483,7 +483,23 @@ class ProfileService {
         if (role) {
           // 状态判断
           const now = new Date();
-          const teamDate = new Date((date || '') + ' ' + (time || ''));
+          // 日期格式化
+          let dateStr = '';
+          if (dateObj instanceof Date) {
+            dateStr = dateObj.toISOString().split('T')[0];
+          } else if (typeof dateObj === 'string') {
+            dateStr = dateObj;
+          }
+          // 时间格式化
+          let timeStr = '';
+          if (timeObj instanceof Date) {
+            const h = timeObj.getHours().toString().padStart(2, '0');
+            const m = timeObj.getMinutes().toString().padStart(2, '0');
+            timeStr = `${h}:${m}`;
+          } else if (typeof timeObj === 'string') {
+            timeStr = timeObj;
+          }
+          const teamDate = new Date(`${dateStr}T${timeStr || '00:00'}`);
           let status: 'active' | 'completed' | 'cancelled' = 'active';
           if (teamDate < now) {
             status = 'completed';
@@ -493,7 +509,7 @@ class ProfileService {
             activity: activity || '',
             game: gameMap.get(gameId) || '未知游戏',
             role,
-            time: date && time ? `${date} ${time}` : (date || ''),
+            time: dateStr && timeStr ? `${dateStr} ${timeStr}` : (dateStr || ''),
             status,
             createdAt: createdAt.toISOString()
           });
@@ -514,7 +530,7 @@ class ProfileService {
     try {
       // 直接用UserFavorite表统计和展示
       const query = new AV.Query('UserFavorite');
-      query.equalTo('userId', userId);
+      query.equalTo('user', userId);
       query.descending('createdAt');
       
       if (dateRange) {
@@ -523,7 +539,7 @@ class ProfileService {
       }
 
       const favorites = await query.find();
-      const gameIds = favorites.map(fav => fav.get('gameId'));
+      const gameIds = favorites.map(fav => fav.get('game'));
 
       if (gameIds.length === 0) {
         return [];
@@ -539,21 +555,21 @@ class ProfileService {
         if (typeof game.id === 'string') {
           gameMap.set(game.id, {
             name: game.get('name'),
-            category: game.get('category'),
+            category: game.get('type'),
             description: game.get('description')
           });
         }
       });
 
       return favorites.map(favorite => {
-        const gameId = favorite.get('gameId');
+        const gameId = favorite.get('game');
         const gameInfo = gameMap.get(gameId) || {};
         return {
           id: favorite.id || '',
           name: gameInfo.name || '未知游戏',
           category: gameInfo.category || '其他',
           description: gameInfo.description || '',
-          favoritedAt: favorite.get('createdAt').toISOString()
+          favoritedAt: favorite.get('createdAt') ? favorite.get('createdAt').toISOString() : ''
         };
       });
     } catch (error) {

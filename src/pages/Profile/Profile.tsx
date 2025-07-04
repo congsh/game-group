@@ -42,6 +42,7 @@ import { useProfileData } from '../../hooks/useProfileData';
 import { profileService } from '../../services/profile';
 // import { ExportButton } from '../../components/common/ExportButton';
 import './Profile.css';
+import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -79,7 +80,7 @@ const calculateUserLevel = (totalVotes: number, totalTeams: number, totalFavorit
 const Profile: React.FC = () => {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
-  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [dateRange, setDateRange] = useState<[any, any] | null>([dayjs().subtract(6, 'day'), dayjs()]);
   const [loading, setLoading] = useState(false);
   
   const {
@@ -151,12 +152,6 @@ const Profile: React.FC = () => {
   // 组队历史表格列配置
   const teamColumns = [
     {
-      title: '活动名称',
-      dataIndex: 'activity',
-      key: 'activity',
-      render: (activity: string) => <Text strong>{activity}</Text>
-    },
-    {
       title: '游戏',
       dataIndex: 'game',
       key: 'game'
@@ -174,7 +169,8 @@ const Profile: React.FC = () => {
     {
       title: '活动时间',
       dataIndex: 'time',
-      key: 'time'
+      key: 'time',
+      render: (time: string) => time || '-',
     },
     {
       title: '状态',
@@ -318,6 +314,7 @@ const Profile: React.FC = () => {
               placeholder={['开始日期', '结束日期']}
               onChange={setDateRange}
               allowClear
+              value={dateRange}
             />
           </Space>
         </div>
