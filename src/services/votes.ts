@@ -475,4 +475,48 @@ export const getRecentVoteStats = async (days: number = 7): Promise<VoteStats[]>
     console.error('获取最近投票统计失败:', error);
     throw error;
   }
+};
+
+/**
+ * 获取指定游戏的投票详情
+ * @param gameId 游戏ID
+ * @param date 日期 (YYYY-MM-DD)
+ * @returns 投票详情列表
+ */
+export const getVoteDetails = async (gameId: string, date: string) => {
+  try {
+    // 查询该日期的所有投票记录
+    const query = new AV.Query('DailyVote');
+    query.equalTo('date', date);
+    query.limit(1000);
+    
+    const votes = await query.find();
+    
+    // 筛选出投了指定游戏的记录
+    const voteDetails = votes
+      .filter((vote) => {
+        const selectedGames = vote.get('selectedGames') || [];
+        return selectedGames.includes(gameId);
+      })
+      .map((vote) => {
+        // 获取该用户对这个游戏的评分
+        const gamePreferences: GamePreference[] = vote.get('gamePreferences') || [];
+        const gamePref = gamePreferences.find(pref => pref.gameId === gameId);
+        
+        return {
+          userId: vote.get('userId') || '',
+          username: vote.get('user') || `用户${(vote.get('userId') || '').slice(-4)}`,
+          gameId: gameId,
+          gameName: '', // 将在组件中设置
+          rating: gamePref?.tendency || 3, // 默认评分为3
+          votedAt: vote.get('updatedAt') || vote.get('createdAt'),
+        };
+      })
+      .sort((a, b) => b.votedAt.getTime() - a.votedAt.getTime());
+    
+    return voteDetails;
+  } catch (error) {
+    console.error('获取投票详情失败:', error);
+    throw error;
+  }
 }; 

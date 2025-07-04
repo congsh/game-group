@@ -37,6 +37,7 @@ import { useGameStore } from '../../store/games';
 import { VoteForm, GamePreference } from '../../types/vote';
 import { initDailyVoteTable } from '../../utils/initData';
 import PageHeader from '../../components/common/PageHeader';
+import VoteDetailsModal from '../../components/ui/VoteDetailsModal';
 import './DailyVote.css';
 
 const { Title, Text } = Typography;
@@ -71,6 +72,13 @@ const DailyVote: React.FC = () => {
   const [gamePreferences, setGamePreferences] = useState<GamePreference[]>([]);
   const [voteSortBy, setVoteSortBy] = useState<'voteCount' | 'averageTendency' | 'gameName'>('voteCount');
   const [gameSearchText, setGameSearchText] = useState(''); // 本地搜索文本
+  
+  // 投票详情模态框状态
+  const [voteDetailsVisible, setVoteDetailsVisible] = useState(false);
+  const [selectedGameForDetails, setSelectedGameForDetails] = useState<{
+    gameId: string;
+    gameName: string;
+  } | null>(null);
   
   // 从状态管理获取的衍生状态
   const hasVoted = useHasVotedToday();
@@ -255,8 +263,6 @@ const DailyVote: React.FC = () => {
       });
     }
   };
-
-
 
   /**
    * 重置表单到初始状态
@@ -451,6 +457,22 @@ const DailyVote: React.FC = () => {
       message.error('数据表修复失败，请重试');
       console.error('修复失败:', error);
     }
+  };
+
+  /**
+   * 处理游戏点击，显示投票详情
+   */
+  const handleGameClick = (gameId: string, gameName: string) => {
+    setSelectedGameForDetails({ gameId, gameName });
+    setVoteDetailsVisible(true);
+  };
+
+  /**
+   * 关闭投票详情模态框
+   */
+  const handleCloseVoteDetails = () => {
+    setVoteDetailsVisible(false);
+    setSelectedGameForDetails(null);
   };
 
   if (loading || gamesLoading) {
@@ -808,7 +830,13 @@ const DailyVote: React.FC = () => {
                               >
                                 #{index + 1}
                               </Tag>
-                              <Text strong>{game.gameName}</Text>
+                              <Text 
+                                strong 
+                                style={{ cursor: 'pointer', color: '#1890ff' }}
+                                onClick={() => handleGameClick(game.gameId, game.gameName)}
+                              >
+                                {game.gameName}
+                              </Text>
                               <Text type="secondary">{game.voteCount} 票</Text>
                             </Space>
                             {game.averageTendency && (
@@ -876,6 +904,17 @@ const DailyVote: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* 投票详情模态框 */}
+      {selectedGameForDetails && (
+        <VoteDetailsModal
+          visible={voteDetailsVisible}
+          gameId={selectedGameForDetails.gameId}
+          gameName={selectedGameForDetails.gameName}
+          date={new Date().toISOString().split('T')[0]}
+          onClose={handleCloseVoteDetails}
+        />
+      )}
     </div>
   );
 };
