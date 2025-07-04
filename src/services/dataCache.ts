@@ -470,17 +470,68 @@ export const getBatchVoteStats = async (days: number = 7): Promise<{[date: strin
 };
 
 /**
- * 获取用户今日投票
+ * 生成优化的缓存键值
+ * @param userId 用户ID
+ * @param date 日期字符串 (YYYY-MM-DD)
+ * @returns 优化的缓存键值
+ */
+const generateOptimizedCacheKey = (userId: string, date: string): string => {
+  // 添加时区信息和版本号，确保缓存键值的唯一性
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const version = 'v2'; // 缓存版本，用于强制更新缓存结构
+  return `user_vote_${version}_${userId}_${date}_${timezone.replace(/\//g, '_')}`;
+};
+
+/**
+ * 检查并清理过期的投票缓存
+ * @param userId 用户ID
+ */
+const cleanupExpiredVoteCaches = (userId: string): void => {
+  const today = new Date().toISOString().split('T')[0];
+  const allKeys = dataCache.keys();
+  
+  // 查找该用户的所有投票缓存
+  const userVoteKeys = allKeys.filter(key => 
+    key.includes(`user_vote_`) && key.includes(`_${userId}_`)
+  );
+  
+  userVoteKeys.forEach(key => {
+    // 提取缓存中的日期
+    const dateMatch = key.match(/_([0-9]{4}-[0-9]{2}-[0-9]{2})_/);
+    if (dateMatch) {
+      const cacheDate = dateMatch[1];
+      // 如果不是今天的缓存，清除它
+      if (cacheDate !== today) {
+        dataCache.clear(key);
+        console.log(`已清除过期投票缓存: ${key}`);
+      }
+    }
+  });
+};
+
+/**
+ * 获取用户今日投票（优化版）
  * @param userId 用户ID
  */
 export const getCachedTodayVote = async (userId: string): Promise<DailyVote | null> => {
   const today = new Date().toISOString().split('T')[0];
-  const cacheKey = `user_vote_${userId}_${today}`;
+  
+  // 首先清理过期缓存
+  cleanupExpiredVoteCaches(userId);
+  
+  const cacheKey = generateOptimizedCacheKey(userId, today);
   
   // 检查缓存
   const cached = dataCache.get<DailyVote>(cacheKey);
   if (cached) {
-    return cached;
+    // 额外验证：确保缓存的日期与今天匹配
+    if (cached.date === today) {
+      return cached;
+    } else {
+      // 如果日期不匹配，清除这个缓存
+      dataCache.clear(cacheKey);
+      console.log(`检测到日期不匹配的缓存，已清除: ${cacheKey}`);
+    }
   }
   
   // 查询用户今日的投票数据
@@ -515,8 +566,16 @@ export const getCachedTodayVote = async (userId: string): Promise<DailyVote | nu
       updatedAt: result.get('updatedAt'),
     };
     
-    // 缓存结果（30分钟）
-    dataCache.set(cacheKey, vote, 30 * 60 * 1000);
+    // 缓存结果（优化缓存时间：直到当天结束）
+    const now = new Date();
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const timeUntilEndOfDay = endOfDay.getTime() - now.getTime();
+    
+    // 使用较短的缓存时间和当天结束时间中的较小值
+    const cacheTime = Math.min(30 * 60 * 1000, timeUntilEndOfDay); // 最多30分钟，或到当天结束
+    dataCache.set(cacheKey, vote, cacheTime);
+    
+    console.log(`投票缓存已设置，过期时间: ${new Date(now.getTime() + cacheTime).toLocaleString()}`);
     
     return vote;
   } catch (error) {
@@ -541,16 +600,79 @@ export const clearGamesCaches = (): void => {
 };
 
 /**
- * 清除投票相关缓存
+ * 清除投票相关缓存（优化版）
+ * @param userId 可选，指定用户ID只清除该用户的缓存
  */
-export const clearVotesCaches = (): void => {
-  // 清除与投票相关的所有缓存
-  dataCache.keys().forEach(key => {
-    if (key.startsWith('batch_vote_stats_') || key.startsWith('user_vote_')) {
+export const clearVotesCaches = (userId?: string): void => {
+  const allKeys = dataCache.keys();
+  let clearedCount = 0;
+  
+  allKeys.forEach(key => {
+    let shouldClear = false;
+    
+    // 清除批量投票统计缓存
+    if (key.startsWith('batch_vote_stats_')) {
+      shouldClear = true;
+    }
+    
+    // 清除用户投票缓存（支持新旧格式）
+    if (key.includes('user_vote_')) {
+      if (userId) {
+        // 如果指定了用户ID，只清除该用户的缓存
+        if (key.includes(`_${userId}_`)) {
+          shouldClear = true;
+        }
+      } else {
+        // 如果没有指定用户ID，清除所有用户投票缓存
+        shouldClear = true;
+      }
+    }
+    
+    if (shouldClear) {
       dataCache.clear(key);
+      clearedCount++;
+      console.log(`已清除投票缓存: ${key}`);
     }
   });
-  console.log('投票相关缓存已清除');
+  
+  const userInfo = userId ? `用户${userId}的` : '所有';
+  console.log(`${userInfo}投票相关缓存已清除 (${clearedCount}个条目)`);
+};
+
+/**
+ * 缓存健康检查和清理
+ * 定期清理过期缓存，检查缓存一致性
+ */
+export const performCacheHealthCheck = (): void => {
+  console.log('开始执行缓存健康检查...');
+  
+  const allKeys = dataCache.keys();
+  const today = new Date().toISOString().split('T')[0];
+  let cleanedCount = 0;
+  
+  allKeys.forEach(key => {
+    // 检查投票缓存的日期一致性
+    if (key.includes('user_vote_')) {
+      const dateMatch = key.match(/_([0-9]{4}-[0-9]{2}-[0-9]{2})_/);
+      if (dateMatch) {
+        const cacheDate = dateMatch[1];
+        if (cacheDate !== today) {
+          dataCache.clear(key);
+          cleanedCount++;
+          console.log(`健康检查：清除过期投票缓存 ${key}`);
+        }
+      }
+    }
+    
+    // 检查旧版本缓存格式
+    if (key.startsWith('user_vote_') && !key.includes('_v2_')) {
+      dataCache.clear(key);
+      cleanedCount++;
+      console.log(`健康检查：清除旧版本缓存 ${key}`);
+    }
+  });
+  
+  console.log(`缓存健康检查完成，清理了 ${cleanedCount} 个过期/无效缓存`);
 };
 
 /**
@@ -559,6 +681,9 @@ export const clearVotesCaches = (): void => {
 export const warmupCaches = async (): Promise<void> => {
   try {
     console.log('开始预热数据缓存...');
+    
+    // 首先执行缓存健康检查
+    performCacheHealthCheck();
     
     // 并行预热主要数据
     await Promise.all([
@@ -571,6 +696,22 @@ export const warmupCaches = async (): Promise<void> => {
   } catch (error) {
     console.error('缓存预热失败:', error);
   }
+};
+
+/**
+ * 启动定期缓存清理任务
+ * 每小时执行一次缓存健康检查
+ */
+export const startCacheCleanupScheduler = (): void => {
+  // 立即执行一次
+  performCacheHealthCheck();
+  
+  // 设置定期清理（每小时）
+  setInterval(() => {
+    performCacheHealthCheck();
+  }, 60 * 60 * 1000); // 1小时
+  
+  console.log('缓存清理调度器已启动，将每小时执行一次健康检查');
 };
 
 /**
@@ -641,4 +782,4 @@ export const clearAllCaches = (): void => {
   console.log('🎯 所有缓存清除完成');
 };
 
-export default dataCache; 
+export default dataCache;

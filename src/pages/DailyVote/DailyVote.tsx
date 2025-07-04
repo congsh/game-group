@@ -90,24 +90,48 @@ const DailyVote: React.FC = () => {
   const { user } = useAuthStore();
 
   /**
-   * 初始化页面数据，并校验缓存日期
+   * 初始化页面数据，并执行增强的缓存检查
    */
   useEffect(() => {
-    // 检查缓存中的投票记录是否为当天
-    const checkAndClearOldVoteCache = async () => {
+    // 增强的缓存检查和清理
+    const performEnhancedCacheCheck = async () => {
       if (!user?.objectId) return;
-      // 动态导入获取缓存投票的函数
-      const { getCachedTodayVote, clearVotesCaches } = await import('../../services/dataCache');
-      // 获取缓存投票（不一定是当天的）
-      const cachedVote = await getCachedTodayVote(user.objectId);
-      if (cachedVote && cachedVote.date !== new Date().toISOString().split('T')[0]) {
-        // 如果缓存不是今天的，清除投票缓存
-        clearVotesCaches();
-        // 可选：提示用户缓存已自动清理
-        console.log('检测到旧缓存，已自动清除投票缓存');
+      
+      try {
+        // 动态导入缓存相关函数
+        const { 
+          getCachedTodayVote, 
+          clearVotesCaches, 
+          performCacheHealthCheck 
+        } = await import('../../services/dataCache');
+        
+        console.log('开始执行增强的缓存检查...');
+        
+        // 执行全局缓存健康检查
+        performCacheHealthCheck();
+        
+        // 检查当前用户的投票缓存
+        const cachedVote = await getCachedTodayVote(user.objectId);
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (cachedVote) {
+          if (cachedVote.date !== today) {
+            // 如果缓存日期不匹配，清除该用户的投票缓存
+            console.warn(`检测到日期不匹配的缓存: 缓存日期=${cachedVote.date}, 今日=${today}`);
+            clearVotesCaches(user.objectId);
+            console.log('已清除该用户的过期投票缓存');
+          } else {
+            console.log('投票缓存日期检查通过');
+          }
+        }
+        
+        console.log('增强的缓存检查完成');
+      } catch (error) {
+        console.error('缓存检查过程中发生错误:', error);
       }
     };
-    checkAndClearOldVoteCache();
+    
+    performEnhancedCacheCheck();
     loadTodayVote();
     loadTodayStats();
     fetchAllGames();
@@ -938,4 +962,4 @@ const DailyVote: React.FC = () => {
   );
 };
 
-export default DailyVote; 
+export default DailyVote;

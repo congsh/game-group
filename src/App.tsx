@@ -66,6 +66,20 @@ function App() {
     }
   }, [user]);
 
+  // 启动缓存清理调度器（应用启动时执行一次）
+  useEffect(() => {
+    const initCacheScheduler = async () => {
+      try {
+        const { startCacheCleanupScheduler } = await import('./services/dataCache');
+        startCacheCleanupScheduler();
+      } catch (error) {
+        console.error('缓存调度器启动失败:', error);
+      }
+    };
+    
+    initCacheScheduler();
+  }, []); // 空依赖数组，确保只执行一次
+
   return (
     <ConfigProvider locale={zhCN} theme={antdTheme}>
       <Router>
@@ -130,4 +144,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;
