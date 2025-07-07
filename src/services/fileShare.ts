@@ -38,6 +38,12 @@ class FileShareService {
         throw new Error('用户未登录');
       }
 
+      // 检查存储空间是否为私有
+      const isPrivateBucket = uploadService.isPrivateBucket();
+
+      // 如果是私有空间，则强制文件为非公开
+      const finalIsPublic = isPrivateBucket ? false : formData.isPublic;
+
       // 1. 上传文件到存储服务
       const uploadResult = await uploadService.upload(file, {
         onProgress,
@@ -74,14 +80,13 @@ class FileShareService {
       fileShare.set('uploaderName', user.username);
       
       // 权限设置
-      fileShare.set('isPublic', formData.isPublic);
+      fileShare.set('isPublic', finalIsPublic);
       fileShare.set('allowDownload', formData.allowDownload);
       fileShare.set('allowComment', formData.allowComment);
 
       // 设置ACL权限
-      // 设置ACL权限
       const acl = new AV.ACL();
-      acl.setPublicReadAccess(formData.isPublic);
+      acl.setPublicReadAccess(finalIsPublic);
       // 修复类型错误：使用用户ID而不是用户对象
       acl.setWriteAccess(user.objectId, true);
       fileShare.setACL(acl);
@@ -300,8 +305,13 @@ class FileShareService {
         } else {
           console.log('ℹ️ 没有相关点赞需要删除');
         }
-      } catch (likeError) {
-        console.error('❌ 删除点赞记录失败:', likeError);
+      } catch (likeError: any) {
+        // 如果错误是因为表不存在(LeanCloud error code 101 in some SDKs, or 404 for REST API), 则静默处理
+        if (likeError && (likeError.code === 101 || (likeError.statusCode === 404 && likeError.message.includes("Class or object doesn't exists")))) {
+            console.log('ℹ️ FileLike 表不存在，跳过点赞记录删除');
+        } else {
+            console.error('❌ 删除点赞记录失败:', likeError);
+        }
         // 不抛出错误，继续删除其他记录
       }
       

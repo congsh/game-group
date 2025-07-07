@@ -71,7 +71,9 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   
   currentPage: 1,
   pageSize: 12,
-  filters: {},
+  filters: {
+    showExpired: false,
+  },
   
   loading: false,
   submitting: false,
@@ -427,7 +429,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
    * 清除筛选条件
    */
   clearFilters: () => {
-    set({ filters: {}, currentPage: 1 });
+    set({ filters: { showExpired: false }, currentPage: 1 });
     get().fetchTeams();
   },
 
@@ -455,7 +457,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       selectedTeam: null,
       total: 0,
       currentPage: 1,
-      filters: {},
+      filters: { showExpired: false },
       loading: false,
       submitting: false,
       joining: false,

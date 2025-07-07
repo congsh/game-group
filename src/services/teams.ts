@@ -163,6 +163,16 @@ export const getWeekendTeams = async (
   try {
     const query = new AV.Query('WeekendTeam');
 
+    // 默认不显示过期组队
+    if (!filters.showExpired) {
+      const today = new Date();
+      today.setHours(8 ,0, 0, 0); // 设置为当天的开始时间
+      const todayStr = today.toISOString().split('T')[0]; // 格式化为 YYYY-MM-DD
+      console.log('todayStr', todayStr);
+      console.log('today', today);
+      query.greaterThanOrEqualTo('eventDate', todayStr);
+    }
+
     // 应用筛选条件
     if (filters.gameId) {
       query.equalTo('game', filters.gameId);

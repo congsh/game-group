@@ -46,6 +46,7 @@ export interface TeamFilters {
   status?: 'open' | 'full' | 'closed';
   sortBy?: 'eventDate' | 'createdAt' | 'memberCount' | 'startTime';  // 扩展排序选项
   sortOrder?: 'asc' | 'desc';
+  showExpired?: boolean; // 新增：是否显示已过期的组队
 }
 
 export interface TeamDetails extends WeekendTeam {

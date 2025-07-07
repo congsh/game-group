@@ -3,7 +3,7 @@
  * 支持文件选择、表单填写、上传进度等功能
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   Form,
@@ -19,7 +19,8 @@ import {
   App,
   Row,
   Col,
-  Divider
+  Divider,
+  notification
 } from 'antd';
 import {
   UploadOutlined,
@@ -33,9 +34,11 @@ import {
   PlusOutlined
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
-import type { RcFile } from 'antd/es/upload/interface';
+import type { RcFile, UploadFile } from 'antd/es/upload/interface';
 import { fileShareService } from '../../services/fileShare';
 import type { FileUploadForm } from '../../types/fileShare';
+import { uploadService } from '../../services/upload.service';
+import './FileUploadModal.css';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -52,35 +55,35 @@ interface FileUploadModalProps {
 const FILE_TYPE_CONFIG = {
   image: {
     accept: '.jpg,.jpeg,.png,.gif,.webp,.bmp',
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 20 * 1024 * 1024, // 20MB
     icon: <FileImageOutlined />,
     color: '#1890ff',
     label: '图片'
   },
   video: {
     accept: '.mp4,.avi,.mov,.wmv,.flv,.webm',
-    maxSize: 100 * 1024 * 1024, // 100MB
+    maxSize: 500 * 1024 * 1024, // 500MB
     icon: <VideoCameraOutlined />,
     color: '#52c41a',
     label: '视频'
   },
   audio: {
     accept: '.mp3,.wav,.ogg,.m4a,.flac',
-    maxSize: 20 * 1024 * 1024, // 20MB
+    maxSize: 150 * 1024 * 1024, // 150MB
     icon: <AudioOutlined />,
     color: '#faad14',
     label: '音频'
   },
   document: {
     accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt',
-    maxSize: 20 * 1024 * 1024, // 20MB
+    maxSize: 40 * 1024 * 1024, // 40MB
     icon: <FileTextOutlined />,
     color: '#eb2f96',
     label: '文档'
   },
   other: {
     accept: '*',
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 100 * 1024 * 1024, // 100MB
     icon: <FileOutlined />,
     color: '#999999',
     label: '其他'
@@ -100,6 +103,10 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
   const [fileCategory, setFileCategory] = useState<keyof typeof FILE_TYPE_CONFIG>('image');
   const [tags, setTags] = useState<string[]>([]);
   const [inputTag, setInputTag] = useState('');
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  // 检查存储是否为私有
+  const isPrivateBucket = useMemo(() => uploadService.isPrivateBucket(), []);
 
   // 重置表单
   const resetForm = () => {
@@ -260,9 +267,10 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
-          isPublic: true,
+          isPublic: !isPrivateBucket,
           allowDownload: true,
-          allowComment: true
+          allowComment: true,
+          category: 'other'
         }}
       >
         {/* 文件上传区域 */}
@@ -425,8 +433,9 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
               name="isPublic"
               label="公开文件"
               valuePropName="checked"
+              tooltip={isPrivateBucket ? "当前存储空间为私有，无法公开文件" : "公开后，所有用户都可见"}
             >
-              <Switch disabled={uploading} />
+              <Switch disabled={isPrivateBucket} />
             </Form.Item>
           </Col>
           <Col span={8}>
