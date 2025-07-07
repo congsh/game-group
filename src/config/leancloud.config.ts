@@ -5,9 +5,9 @@
 
 export const LEANCLOUD_CONFIG = {
   // 你的LeanCloud应用配置
-  appId: process.env.REACT_APP_LEANCLOUD_APP_ID || 'Kdx6AZMdQRwQXsAIa45L8wb5-gzGzoHsz',
-  appKey: process.env.REACT_APP_LEANCLOUD_APP_KEY || 'T5SUIFGSeWjK1H7yrsULt79j', 
-  serverURL: process.env.REACT_APP_LEANCLOUD_SERVER_URL || 'https://kdx6azmd.lc-cn-n1-shared.com',
+  appId: process.env.REACT_APP_LEANCLOUD_APP_ID || '',
+  appKey: process.env.REACT_APP_LEANCLOUD_APP_KEY || '', 
+  serverURL: process.env.REACT_APP_LEANCLOUD_SERVER_URL || '',
   // Master Key用于服务端操作（注意：不要在前端暴露Master Key）
   // masterKey: process.env.REACT_APP_LEANCLOUD_MASTER_KEY || ''
 };

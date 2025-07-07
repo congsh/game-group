@@ -32,7 +32,8 @@ import {
   BellOutlined,
   SearchOutlined,
   EyeInvisibleOutlined,
-  EyeOutlined
+  EyeOutlined,
+  FileOutlined
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/auth';
 import './AppLayout.css';
@@ -71,6 +72,12 @@ const menuItems = [
     title: '游戏组队'
   },
   {
+    key: '/files',
+    icon: <FileOutlined />,
+    label: '文件分享',
+    title: '文件分享论坛'
+  },
+  {
     key: '/reports',
     icon: <BarChartOutlined />,
     label: '数据报表',
@@ -84,6 +91,7 @@ const breadcrumbMap: Record<string, string[]> = {
   '/games': ['首页', '游戏库'],
   '/vote': ['首页', '每日投票'],
   '/teams': ['首页', '游戏组队'],
+  '/files': ['首页', '文件分享'],
   '/reports': ['首页', '数据报表'],
   '/profile': ['首页', '个人中心'],
 };

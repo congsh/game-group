@@ -1,0 +1,211 @@
+/**
+ * 文件分享页面样式
+ */
+
+.file-share-page {
+  padding: 24px;
+  background: #f5f5f5;
+  min-height: calc(100vh - 64px);
+}
+
+/* 页面头部 */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-left h2 {
+  color: #1890ff;
+  margin-bottom: 4px;
+}
+
+/* 统计信息 */
+.stats-section {
+  margin-bottom: 24px;
+}
+
+.stats-section .ant-card {
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 筛选区域 */
+.filter-section {
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 文件列表 */
+.file-list-section {
+  margin-bottom: 24px;
+}
+
+/* 文件卡片 */
+.file-card {
+  height: 100%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.file-cover {
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+}
+
+.file-cover-placeholder {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+}
+
+.file-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.file-card-description {
+  margin-top: 8px;
+}
+
+.file-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.file-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 文件卡片动作按钮 */
+.file-card .ant-card-actions {
+  background: #fafafa;
+}
+
+.file-card .ant-card-actions > li {
+  margin: 0;
+}
+
+.file-card .ant-card-actions .ant-btn {
+  border: none;
+  box-shadow: none;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.file-card .ant-card-actions .ant-btn:hover {
+  color: #1890ff;
+}
+
+.file-card .ant-card-actions .ant-btn:disabled {
+  color: #d9d9d9;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .file-share-page {
+    padding: 16px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .header-right {
+    width: 100%;
+  }
+  
+  .header-right .ant-btn {
+    width: 100%;
+  }
+  
+  .stats-section {
+    margin-bottom: 16px;
+  }
+  
+  .filter-section {
+    margin-bottom: 16px;
+  }
+  
+  .file-list-section {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .file-card-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .file-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .file-details {
+    justify-content: flex-start;
+  }
+}
+
+/* 加载状态 */
+.ant-spin-nested-loading > .ant-spin .ant-spin-dot {
+  top: 50%;
+  left: 50%;
+  margin: -10px;
+}
+
+/* 空状态 */
+.ant-empty {
+  margin: 40px 0;
+}
+
+/* 标签样式 */
+.ant-tag {
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+/* 头像样式 */
+.ant-avatar {
+  background-color: #1890ff;
+}
+
+/* 卡片标题省略号 */
+.ant-typography {
+  margin-bottom: 0;
+}
+
+/* 统计卡片图标 */
+.ant-statistic-content .anticon {
+  color: #1890ff;
+  margin-right: 8px;
+} 
