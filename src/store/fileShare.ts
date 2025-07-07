@@ -281,7 +281,7 @@ export const useFileShareStore = create<FileShareState>((set, get) => ({
   // 下载文件
   downloadFile: async (fileId) => {
     try {
-      const fileUrl = await fileShareService.downloadFile(fileId);
+      const { url, name } = await fileShareService.downloadFile(fileId);
       
       // 更新下载次数
       set(state => ({
@@ -296,13 +296,15 @@ export const useFileShareStore = create<FileShareState>((set, get) => ({
         )
       }));
       
-      // 触发浏览器下载
+      // 恢复使用 <a> 标签下载，避免CORS问题
       const link = document.createElement('a');
-      link.href = fileUrl;
-      link.download = '';
+      link.href = url;
+      link.download = name || 'download';
       document.body.appendChild(link);
-      link.click();
+      link.click(); // 恢复下载功能
+      // console.log('下载已暂停，请检查上方日志。生成的下载链接为:', url);
       document.body.removeChild(link);
+
     } catch (error: any) {
       set({ error: error.message });
       throw error;

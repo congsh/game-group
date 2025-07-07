@@ -164,8 +164,12 @@ class FileShareService {
         query.count()
       ]);
       
+      const files = await Promise.all(
+        results.map(file => this.formatFileShare(file))
+      );
+
       return {
-        files: results.map(file => this.formatFileShare(file)),
+        files: files,
         total,
         page,
         pageSize,
@@ -191,9 +195,9 @@ class FileShareService {
       
       // 增加查看次数
       file.increment('viewCount', 1);
-      await file.save();
+      const savedFile = await file.save();
       
-      return this.formatFileShare(file);
+      return await this.formatFileShare(savedFile);
     } catch (error) {
       console.error('获取文件详情失败:', error);
       throw error;
@@ -343,7 +347,7 @@ class FileShareService {
   /**
    * 下载文件
    */
-  async downloadFile(fileId: string): Promise<string> {
+  async downloadFile(fileId: string): Promise<{ url: string; name: string }> {
     try {
       const { user } = useAuthStore.getState();
       if (!user) {
@@ -373,7 +377,30 @@ class FileShareService {
       file.increment('downloadCount', 1);
       await file.save();
       
-      return file.get('fileUrl');
+      const fileKey = file.get('fileKey');
+      const fileName = file.get('fileName');
+      const isPublic = file.get('isPublic');
+
+      console.log('下载文件检查:', {
+        fileId: fileId,
+        fileKey: fileKey,
+        isPublic: isPublic,
+        fileName: fileName,
+      });
+
+      // 只要文件存在key，就为其生成签名URL，不再依赖isPublic
+      if (fileKey) {
+        console.log(`为文件 ${fileKey} 生成签名下载链接...`);
+        const signedUrl = await uploadService.getFileUrl(fileKey, {
+          download: true,
+          filename: fileName,
+          private: true // 强制认为是私有链接
+        });
+        return { url: signedUrl, name: fileName };
+      }
+
+      // 对于没有key的旧文件，直接返回原始URL
+      return { url: file.get('fileUrl'), name: fileName };
     } catch (error) {
       console.error('下载文件失败:', error);
       throw error;
@@ -566,14 +593,21 @@ class FileShareService {
       popularQuery.equalTo('isPublic', true);
       popularQuery.descending(['likeCount', 'viewCount']);
       popularQuery.limit(10);
-      const topFiles = await popularQuery.find();
       
-      // 最新文件
       const recentQuery = new AV.Query(this.FileShare);
       recentQuery.equalTo('isPublic', true);
       recentQuery.descending('createdAt');
       recentQuery.limit(10);
-      const recentFiles = await recentQuery.find();
+      
+      const [topFilesRaw, recentFilesRaw] = await Promise.all([
+        popularQuery.find(),
+        recentQuery.find()
+      ]);
+
+      const [topFiles, recentFiles] = await Promise.all([
+        Promise.all(topFilesRaw.map((file: any) => this.formatFileShare(file))),
+        Promise.all(recentFilesRaw.map((file: any) => this.formatFileShare(file)))
+      ]);
       
       return {
         totalFiles,
@@ -581,8 +615,8 @@ class FileShareService {
         totalViews: 0,     // TODO: 从文件记录统计
         totalComments: 0,  // TODO: 从评论记录统计
         categoryCounts,
-        topFiles: topFiles.map(file => this.formatFileShare(file)),
-        recentFiles: recentFiles.map(file => this.formatFileShare(file))
+        topFiles: topFiles,
+        recentFiles: recentFiles
       };
     } catch (error) {
       console.error('获取统计信息失败:', error);
@@ -593,7 +627,41 @@ class FileShareService {
   /**
    * 格式化文件分享对象
    */
-  private formatFileShare(avObject: any): FileShare {
+  private async formatFileShare(avObject: any): Promise<FileShare> {
+    const isPublic = avObject.get('isPublic');
+    const fileKey = avObject.get('fileKey');
+    const fileType = avObject.get('fileType');
+    let thumbnailUrl = avObject.get('thumbnailUrl');
+
+    // 只要文件是图片类型且有fileKey，就动态为其生成带签名的缩略图URL
+    const shouldSignThumbnail = fileKey && fileType && fileType.startsWith('image/');
+
+    const logPayload = {
+      originalUrl: thumbnailUrl,
+      isPublic: isPublic,
+      fileKey: fileKey,
+      fileType: fileType,
+      willAttemptSign: shouldSignThumbnail,
+      finalUrl: thumbnailUrl
+    };
+
+    // 如果文件是私有的、是图片且有fileKey，则动态生成带签名的缩略图URL
+    if (logPayload.willAttemptSign) {
+      try {
+        thumbnailUrl = await uploadService.getFileUrl(fileKey, {
+          width: 200,
+          height: 200,
+          private: true // 强制签名
+        });
+        logPayload.finalUrl = thumbnailUrl;
+      } catch(e) {
+        console.error(`为 ${fileKey} 生成缩略图签名URL失败:`, e);
+        // 保留原始URL或设置为空，避免页面崩溃
+      }
+    }
+
+    console.log('缩略图URL处理日志:', logPayload);
+
     return {
       objectId: avObject.id,
       title: avObject.get('title'),
@@ -603,7 +671,7 @@ class FileShareService {
       fileName: avObject.get('fileName'),
       fileSize: avObject.get('fileSize'),
       fileType: avObject.get('fileType'),
-      thumbnailUrl: avObject.get('thumbnailUrl'),
+      thumbnailUrl: thumbnailUrl,
       category: avObject.get('category'),
       tags: avObject.get('tags') || [],
       downloadCount: avObject.get('downloadCount') || 0,

@@ -47,6 +47,13 @@ class UploadService {
   }
 
   /**
+   * 检查存储空间是否为私有
+   */
+  isPrivateBucket(): boolean {
+    return this.config.isPrivate || false;
+  }
+
+  /**
    * 上传文件
    */
   async upload(
@@ -120,13 +127,12 @@ class UploadService {
           const fileUrl = `${this.config.domain}/${res.key}`;
           const fileType = file.type || this.getMimeType(file.name);
           
-          // 如果是图片，使用getFileUrl方法生成带签名的缩略图URL
-          const thumbnailUrl = fileType.startsWith('image/')
-            ? await this.getFileUrl(res.key, {
-                width: 200,
-                height: 200
-              })
-            : undefined;
+          let thumbnailUrl: string | undefined;
+          if (fileType.startsWith('image/')) {
+            // 只附加图片处理参数，不进行签名。
+            // 这个永久性的、不含签名的URL将被存入数据库。
+            thumbnailUrl = `${fileUrl}?imageView2/2/w/200/h/200`;
+          }
 
           resolve({
             url: fileUrl,
@@ -455,8 +461,15 @@ class UploadService {
       url += separator + params.join(this.config.provider === 'qiniu' ? '&' : '&');
     }
 
-    // 如果是七牛云的私有空间，则生成带签名的URL
-    if (this.config.provider === 'qiniu' && this.config.isPrivate) {
+    console.log('签名URL检查:', {
+        provider: this.config.provider,
+        isPrivateBucket: this.config.isPrivate,
+        options: options,
+        shouldSign: this.config.provider === 'qiniu' && (this.config.isPrivate || !!options?.private)
+    });
+
+    // 如果是七牛云的私有空间或文件被指定为私有，则生成带签名的URL
+    if (this.config.provider === 'qiniu' && (this.config.isPrivate || options?.private)) {
       const accessKey = process.env.REACT_APP_QINIU_AK;
       const secretKey = process.env.REACT_APP_QINIU_SK;
 
@@ -466,19 +479,12 @@ class UploadService {
       }
 
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1小时有效期
-      const urlObj = new URL(url);
       
-      // 构造签名字符串：URL的path部分 + query参数
-      let signStr = urlObj.pathname;
-      if (urlObj.search) {
-        signStr += '?' + urlObj.search.slice(1);
-      }
-      
-      // 添加deadline参数
-      signStr += (urlObj.search ? '&' : '?') + `e=${deadline}`;
+      // 构造待签名的URL: 完整的原始URL + 过期时间参数
+      const urlToSign = `${url}${url.includes('?') ? '&' : '?'}e=${deadline}`;
       
       // 计算HMAC-SHA1签名
-      const sign = CryptoJS.HmacSHA1(signStr, secretKey);
+      const sign = CryptoJS.HmacSHA1(urlToSign, secretKey);
       const encodedSign = sign.toString(CryptoJS.enc.Base64)
         .replace(/\+/g, '-')
         .replace(/\//g, '_');
@@ -487,8 +493,7 @@ class UploadService {
       const downloadToken = `${accessKey}:${encodedSign}`;
       
       // 拼接最终的URL
-      const separator = url.includes('?') ? '&' : '?';
-      return `${url}${separator}e=${deadline}&token=${downloadToken}`;
+      return `${urlToSign}&token=${downloadToken}`;
     }
 
     return url;

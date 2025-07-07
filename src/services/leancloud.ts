@@ -31,7 +31,7 @@ export const initLeanCloud = () => {
  */
 export const checkLeanCloudConfig = (): boolean => {
   const isConfigured = !!(LEANCLOUD_CONFIG.appId && LEANCLOUD_CONFIG.appKey && LEANCLOUD_CONFIG.serverURL);
-  
+  console.log('LEANCLOUD_CONFIG', LEANCLOUD_CONFIG);
   if (!isConfigured) {
     console.warn('LeanCloud 配置不完整');
   }
