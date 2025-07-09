@@ -21,6 +21,7 @@ import WeekendTeams from './pages/WeekendTeams/WeekendTeams';
 import Reports from './pages/Reports/Reports';
 import Profile from './pages/Profile/Profile';
 import FileShare from './pages/FileShare/FileShare';
+import MessageBoard from './pages/MessageBoard/MessageBoard';
 import { checkAndInitData } from './utils/initData';
 import './utils/debug-auth'; // 导入调试工具（开发环境下会自动启用）
 import './App.css';
@@ -210,6 +211,16 @@ const AppContent: React.FC = () => {
               <ProtectedRoute>
                 <LayoutWrapper>
                   <FileShare />
+                </LayoutWrapper>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/messages" 
+            element={
+              <ProtectedRoute>
+                <LayoutWrapper>
+                  <MessageBoard />
                 </LayoutWrapper>
               </ProtectedRoute>
             } 

@@ -229,6 +229,80 @@ export const initUserFavoriteTable = async (): Promise<void> => {
 };
 
 /**
+ * 初始化 Message 数据表
+ */
+export const initMessageTable = async (): Promise<void> => {
+  try {
+    // 获取当前用户
+    const currentUser = AV.User.current();
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+
+    console.log('开始创建Message表结构...');
+
+    // 直接创建一个临时的 Message 记录来建立数据表结构
+    const MessageClass = AV.Object.extend('Message');
+    const placeholderMessage = new MessageClass();
+    
+    placeholderMessage.set('content', '_PLACEHOLDER_MESSAGE_');
+    placeholderMessage.set('authorId', currentUser.id);
+    placeholderMessage.set('authorName', currentUser.get('username'));
+    placeholderMessage.set('mentionedUsers', []);
+    
+    const savedMessage = await placeholderMessage.save();
+    console.log('Message表创建成功');
+    
+    // 立即删除占位符记录
+    await savedMessage.destroy();
+    console.log('清理占位符记录完成');
+    
+    console.log('Message表初始化完成');
+  } catch (error: any) {
+    console.error('初始化Message表失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 初始化 MessageNotification 数据表
+ */
+export const initMessageNotificationTable = async (): Promise<void> => {
+  try {
+    // 获取当前用户
+    const currentUser = AV.User.current();
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+
+    console.log('开始创建MessageNotification表结构...');
+
+    // 直接创建一个临时的 MessageNotification 记录来建立数据表结构
+    const MessageNotificationClass = AV.Object.extend('MessageNotification');
+    const placeholderNotification = new MessageNotificationClass();
+    
+    placeholderNotification.set('messageId', '_PLACEHOLDER_MESSAGE_ID_');
+    placeholderNotification.set('recipientId', currentUser.id);
+    placeholderNotification.set('senderId', currentUser.id);
+    placeholderNotification.set('senderName', currentUser.get('username'));
+    placeholderNotification.set('messageContent', '_PLACEHOLDER_CONTENT_');
+    placeholderNotification.set('isRead', false);
+    
+    const savedNotification = await placeholderNotification.save();
+    console.log('MessageNotification表创建成功');
+    
+    // 立即删除占位符记录
+    await savedNotification.destroy();
+    console.log('清理占位符记录完成');
+    
+    console.log('MessageNotification表初始化完成');
+  } catch (error: any) {
+    console.error('初始化MessageNotification表失败:', error);
+    throw error;
+  }
+};
+
+/**
  * 检查并初始化所有数据表（包含示例数据）
  */
 export const checkAndInitData = async (): Promise<boolean> => {
@@ -238,6 +312,8 @@ export const checkAndInitData = async (): Promise<boolean> => {
     await initDailyVoteTable();
     await initWeekendTeamTable();
     await initUserFavoriteTable();
+    await initMessageTable();
+    await initMessageNotificationTable();
     
     console.log('所有数据表和示例数据初始化完成');
     return true;
@@ -321,6 +397,12 @@ export const manualInitTables = async (): Promise<void> => {
     
     console.log('4. 初始化 UserFavorite 表...');
     await initUserFavoriteTable();
+    
+    console.log('5. 初始化 Message 表...');
+    await initMessageTable();
+    
+    console.log('6. 初始化 MessageNotification 表...');
+    await initMessageNotificationTable();
     
     console.log('✅ 所有数据表初始化完成！');
     alert('数据表初始化完成！');
@@ -411,6 +493,40 @@ export const quickFixMissingTables = async (): Promise<void> => {
               console.log('📝 创建DailyVote表...');
               await initDailyVoteTable();
               console.log('✅ DailyVote表创建成功');
+            }
+          }
+        }
+      },
+      {
+        name: 'Message表',
+        fn: async () => {
+          try {
+            const query = new AV.Query('Message');
+            query.limit(1);
+            await query.find();
+            console.log('✅ Message表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建Message表...');
+              await initMessageTable();
+              console.log('✅ Message表创建成功');
+            }
+          }
+        }
+      },
+      {
+        name: 'MessageNotification表',
+        fn: async () => {
+          try {
+            const query = new AV.Query('MessageNotification');
+            query.limit(1);
+            await query.find();
+            console.log('✅ MessageNotification表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建MessageNotification表...');
+              await initMessageNotificationTable();
+              console.log('✅ MessageNotification表创建成功');
             }
           }
         }
