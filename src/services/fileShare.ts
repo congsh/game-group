@@ -74,15 +74,12 @@ class FileShareService {
       fileShare.set('uploaderName', user.username);
       
       // 权限设置
-      fileShare.set('isPublic', formData.isPublic);
       fileShare.set('allowDownload', formData.allowDownload);
       fileShare.set('allowComment', formData.allowComment);
 
-      // 设置ACL权限
-      // 设置ACL权限
+      // 设置ACL权限 - 始终允许公开读取
       const acl = new AV.ACL();
-      acl.setPublicReadAccess(formData.isPublic);
-      // 修复类型错误：使用用户ID而不是用户对象
+      acl.setPublicReadAccess(true);  // 始终设置为true，确保所有文件都能在界面显示
       acl.setWriteAccess(user.objectId, true);
       fileShare.setACL(acl);
 
@@ -100,9 +97,6 @@ class FileShareService {
   async getFileShares(params: FileSearchParams = {}): Promise<FileShareResponse> {
     try {
       let query = new AV.Query(this.FileShare);
-      
-      // 只查询公开的文件
-      query.equalTo('isPublic', true);
       
       // 分类筛选
       if (params.category) {
@@ -122,7 +116,6 @@ class FileShareService {
         
         // 创建组合查询
         const combinedQuery = AV.Query.or(titleQuery, descQuery, fileNameQuery);
-        combinedQuery.equalTo('isPublic', true);
         
         // 使用组合查询替换原始查询
         query = combinedQuery;
@@ -379,12 +372,10 @@ class FileShareService {
       
       const fileKey = file.get('fileKey');
       const fileName = file.get('fileName');
-      const isPublic = file.get('isPublic');
 
       console.log('下载文件检查:', {
         fileId: fileId,
         fileKey: fileKey,
-        isPublic: isPublic,
         fileName: fileName,
       });
 
@@ -572,7 +563,6 @@ class FileShareService {
   async getFileStats(): Promise<FileStats> {
     try {
       const query = new AV.Query(this.FileShare);
-      query.equalTo('isPublic', true);
       
       // 总文件数
       const totalFiles = await query.count();
@@ -583,19 +573,16 @@ class FileShareService {
       
       for (const category of categories) {
         const categoryQuery = new AV.Query(this.FileShare);
-        categoryQuery.equalTo('isPublic', true);
         categoryQuery.equalTo('category', category);
         categoryCounts[category] = await categoryQuery.count();
       }
       
       // 热门文件
       const popularQuery = new AV.Query(this.FileShare);
-      popularQuery.equalTo('isPublic', true);
       popularQuery.descending(['likeCount', 'viewCount']);
       popularQuery.limit(10);
       
       const recentQuery = new AV.Query(this.FileShare);
-      recentQuery.equalTo('isPublic', true);
       recentQuery.descending('createdAt');
       recentQuery.limit(10);
       
@@ -628,7 +615,6 @@ class FileShareService {
    * 格式化文件分享对象
    */
   private async formatFileShare(avObject: any): Promise<FileShare> {
-    const isPublic = avObject.get('isPublic');
     const fileKey = avObject.get('fileKey');
     const fileType = avObject.get('fileType');
     let thumbnailUrl = avObject.get('thumbnailUrl');
@@ -638,14 +624,13 @@ class FileShareService {
 
     const logPayload = {
       originalUrl: thumbnailUrl,
-      isPublic: isPublic,
       fileKey: fileKey,
       fileType: fileType,
       willAttemptSign: shouldSignThumbnail,
       finalUrl: thumbnailUrl
     };
 
-    // 如果文件是私有的、是图片且有fileKey，则动态生成带签名的缩略图URL
+    // 如果文件是图片且有fileKey，则动态生成带签名的缩略图URL
     if (logPayload.willAttemptSign) {
       try {
         thumbnailUrl = await uploadService.getFileUrl(fileKey, {
@@ -680,7 +665,6 @@ class FileShareService {
       commentCount: avObject.get('commentCount') || 0,
       uploaderId: avObject.get('uploaderId'),
       uploaderName: avObject.get('uploaderName'),
-      isPublic: avObject.get('isPublic'),
       allowDownload: avObject.get('allowDownload'),
       allowComment: avObject.get('allowComment'),
       createdAt: avObject.createdAt?.toISOString(),

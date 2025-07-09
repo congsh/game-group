@@ -25,7 +25,6 @@ export interface FileShare {
   uploaderName: string;             // 上传者昵称
   
   // 权限设置
-  isPublic: boolean;                // 是否公开
   allowDownload: boolean;           // 是否允许下载
   allowComment: boolean;            // 是否允许评论
   
@@ -79,7 +78,6 @@ export interface FileUploadForm {
   description?: string;
   tags?: string[];
   category: 'image' | 'video' | 'audio' | 'document' | 'other';
-  isPublic: boolean;
   allowDownload: boolean;
   allowComment: boolean;
 }

@@ -99,36 +99,20 @@ const DailyVote: React.FC = () => {
       if (!user?.objectId) return;
       
       try {
-        // 动态导入缓存相关函数
-        const { 
-          getCachedTodayVote, 
-          clearVotesCaches, 
-          performCacheHealthCheck 
-        } = await import('../../services/dataCache');
+        // 使用服务层的统一缓存验证功能
+        const { validateCacheOnPageInit } = await import('../../services/votes');
         
-        console.log('开始执行增强的缓存检查...');
+        const shouldShowWarning = await validateCacheOnPageInit(user.objectId);
         
-        // 执行全局缓存健康检查
-        performCacheHealthCheck();
-        
-        // 检查当前用户的投票缓存
-        const cachedVote = await getCachedTodayVote(user.objectId);
-        const today = new Date().toISOString().split('T')[0];
-        
-        if (cachedVote) {
-          if (cachedVote.date !== today) {
-            // 如果缓存日期不匹配，清除该用户的投票缓存
-            console.warn(`检测到日期不匹配的缓存: 缓存日期=${cachedVote.date}, 今日=${today}`);
-            clearVotesCaches(user.objectId);
-            console.log('已清除该用户的过期投票缓存');
-          } else {
-            console.log('投票缓存日期检查通过');
-          }
+        if (shouldShowWarning) {
+          // 显示提示消息
+          message.warning({
+            content: '检测到缓存数据不同步，已自动清除并重新加载',
+            duration: 3
+          });
         }
-        
-        console.log('增强的缓存检查完成');
       } catch (error) {
-        console.error('缓存检查过程中发生错误:', error);
+        console.error('❌ 缓存检查过程中发生错误:', error);
       }
     };
     
@@ -155,6 +139,26 @@ const DailyVote: React.FC = () => {
   }, [todayVote, form]);
 
   /**
+   * 投票提交前的预验证
+   */
+  const preSubmitValidation = async (): Promise<boolean> => {
+    if (!user?.objectId) {
+      console.error('❌ 用户未登录');
+      message.error('请先登录');
+      return false;
+    }
+
+    try {
+      // 使用服务层的统一提交前验证功能
+      const { validateBeforeSubmit } = await import('../../services/votes');
+      return await validateBeforeSubmit(user.objectId);
+    } catch (error) {
+      console.error('❌ 提交前验证失败:', error);
+      return true; // 即使验证失败，也允许提交，让后续逻辑处理
+    }
+  };
+
+  /**
    * 处理投票提交
    */
   const handleSubmit = async (values: VoteForm) => {
@@ -165,6 +169,12 @@ const DailyVote: React.FC = () => {
       console.log('本地状态 - wantsToPlay:', wantsToPlay);
       console.log('本地状态 - selectedGames:', selectedGames);
       console.log('本地状态 - gamePreferences:', gamePreferences);
+      
+      // 🔍 提交前预验证
+      const preValidationPassed = await preSubmitValidation();
+      if (!preValidationPassed) {
+        return;
+      }
       
       // ✅ 使用当前本地状态构建提交数据，确保数据一致性
       const submitData: VoteForm = {

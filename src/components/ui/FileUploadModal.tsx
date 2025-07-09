@@ -212,7 +212,6 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         description: values.description,
         category: fileCategory,
         tags: tags,
-        isPublic: values.isPublic !== false,
         allowDownload: values.allowDownload !== false,
         allowComment: values.allowComment !== false
       };
@@ -260,7 +259,6 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
-          isPublic: true,
           allowDownload: true,
           allowComment: true
         }}
@@ -420,16 +418,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         <Title level={5}>权限设置</Title>
         
         <Row gutter={24}>
-          <Col span={8}>
-            <Form.Item
-              name="isPublic"
-              label="公开文件"
-              valuePropName="checked"
-            >
-              <Switch disabled={uploading} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
+          <Col span={12}>
             <Form.Item
               name="allowDownload"
               label="允许下载"
@@ -438,7 +427,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
               <Switch disabled={uploading} />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={12}>
             <Form.Item
               name="allowComment"
               label="允许评论"
