@@ -173,6 +173,19 @@ export const getWeekendTeams = async (
     if (filters.status) {
       query.equalTo('status', filters.status);
     }
+    
+    // 日期范围筛选
+    if (filters.startDate && filters.endDate) {
+      // 如果有起始和结束日期，使用范围筛选
+      query.greaterThanOrEqualTo('eventDate', filters.startDate);
+      query.lessThanOrEqualTo('eventDate', filters.endDate);
+    } else if (filters.startDate) {
+      // 只有起始日期，筛选大于等于起始日期的记录
+      query.greaterThanOrEqualTo('eventDate', filters.startDate);
+    } else if (filters.endDate) {
+      // 只有结束日期，筛选小于等于结束日期的记录
+      query.lessThanOrEqualTo('eventDate', filters.endDate);
+    }
 
     // 检查是否是自定义排序（需要在前端处理）
     const needCustomSort = filters.sortBy === 'memberCount';

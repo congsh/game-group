@@ -15,14 +15,18 @@ import {
   Alert,
   message,
   Select,
-  Modal
+  Modal,
+  DatePicker
 } from 'antd';
 import {
   TeamOutlined,
   PlusOutlined,
   CalendarOutlined,
-  SortAscendingOutlined
+  SortAscendingOutlined,
+  FilterOutlined
 } from '@ant-design/icons';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { useTeamStore } from '../../store/teams';
 import { TeamDetails } from '../../types/team';
 import { initWeekendTeamTable } from '../../utils/initData';
@@ -62,8 +66,13 @@ const WeekendTeams: React.FC = () => {
    * 初始化页面数据
    */
   useEffect(() => {
-    fetchTeams();
-  }, [fetchTeams]);
+    // 设置默认筛选条件：从今天开始
+    const today = dayjs().format('YYYY-MM-DD');
+    setFilters({
+      ...filters,
+      startDate: today
+    });
+  }, []);
 
   /**
    * 处理查看详情
@@ -225,6 +234,78 @@ const WeekendTeams: React.FC = () => {
           </Col>
         </Row>
       </div>
+
+      {/* 日期筛选器 */}
+      <Card 
+        size="small" 
+        style={{ marginBottom: 24 }}
+        title={
+          <Space>
+            <FilterOutlined />
+            <span>筛选条件</span>
+          </Space>
+        }
+      >
+        <Row gutter={16} align="middle">
+          <Col>
+            <Space>
+              <span>活动日期：</span>
+              <DatePicker
+                placeholder="开始日期"
+                value={filters.startDate ? dayjs(filters.startDate) : null}
+                onChange={(date: Dayjs | null) => {
+                  setFilters({
+                    ...filters,
+                    startDate: date ? date.format('YYYY-MM-DD') : undefined
+                  });
+                }}
+                allowClear
+              />
+              <span>至</span>
+              <DatePicker
+                placeholder="结束日期"
+                value={filters.endDate ? dayjs(filters.endDate) : null}
+                onChange={(date: Dayjs | null) => {
+                  setFilters({
+                    ...filters,
+                    endDate: date ? date.format('YYYY-MM-DD') : undefined
+                  });
+                }}
+                allowClear
+              />
+            </Space>
+          </Col>
+          <Col>
+            <Button
+              type="default"
+              onClick={() => {
+                setFilters({
+                  ...filters,
+                  startDate: undefined,
+                  endDate: undefined
+                });
+              }}
+            >
+              清除日期筛选
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              onClick={() => {
+                const today = dayjs().format('YYYY-MM-DD');
+                setFilters({
+                  ...filters,
+                  startDate: today,
+                  endDate: undefined
+                });
+              }}
+            >
+              从今天开始
+            </Button>
+          </Col>
+        </Row>
+      </Card>
 
       {error && (
         <Alert

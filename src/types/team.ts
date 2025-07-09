@@ -46,6 +46,9 @@ export interface TeamFilters {
   status?: 'open' | 'full' | 'closed';
   sortBy?: 'eventDate' | 'createdAt' | 'memberCount' | 'startTime';  // 扩展排序选项
   sortOrder?: 'asc' | 'desc';
+  // 日期筛选范围
+  startDate?: string;  // 起始日期 (YYYY-MM-DD)
+  endDate?: string;    // 结束日期 (YYYY-MM-DD)
 }
 
 export interface TeamDetails extends WeekendTeam {
