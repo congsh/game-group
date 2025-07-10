@@ -1,0 +1,79 @@
+/**
+ * 勋章墙页面样式
+ */
+
+.badge-walls-page {
+  padding: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.badge-walls-page .page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+}
+
+.badge-walls-page .page-header .ant-card-body {
+  padding: 32px 24px;
+}
+
+.badge-walls-page .page-header h2 {
+  color: white !important;
+  font-weight: 600;
+}
+
+.badge-walls-page .page-header .ant-typography {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 16px;
+}
+
+/* 勋章卡片悬浮效果 */
+.badge-walls-page .ant-card-hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+/* 勋章列表项样式 */
+.badge-walls-page .ant-list-item {
+  padding: 16px 24px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.badge-walls-page .ant-list-item:hover {
+  background-color: #fafafa;
+}
+
+/* 使用说明卡片样式 */
+.badge-walls-page .ant-card:last-child {
+  background: #fafafa;
+  border: 1px dashed #d9d9d9;
+}
+
+.badge-walls-page .ant-card:last-child .ant-card-head {
+  background: transparent;
+  border-bottom: 1px dashed #d9d9d9;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .badge-walls-page {
+    padding: 0 8px;
+  }
+  
+  .badge-walls-page .page-header .ant-card-body {
+    padding: 24px 16px;
+  }
+  
+  .badge-walls-page .page-header h2 {
+    font-size: 24px;
+  }
+  
+  .badge-walls-page .page-header .ant-typography {
+    font-size: 14px;
+  }
+} 

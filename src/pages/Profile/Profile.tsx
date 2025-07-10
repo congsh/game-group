@@ -1,6 +1,6 @@
 /**
  * 个人中心页面
- * 展示用户的基本信息、投票历史、组队历史、收藏游戏等个人数据
+ * 展示用户的基本信息、投票历史、组队历史、收藏游戏、勋章墙等个人数据
  */
 
 import React, { useState, useEffect } from 'react';
@@ -40,6 +40,7 @@ import {
 import { useAuthStore } from '../../store/auth';
 import { useProfileData } from '../../hooks/useProfileData';
 import { profileService } from '../../services/profile';
+import BadgeWall from '../../components/ui/BadgeWall';
 // import { ExportButton } from '../../components/common/ExportButton';
 import './Profile.css';
 import dayjs from 'dayjs';
@@ -79,9 +80,10 @@ const calculateUserLevel = (totalVotes: number, totalTeams: number, totalFavorit
 
 const Profile: React.FC = () => {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('stats'); // 默认显示个人统计
   const [dateRange, setDateRange] = useState<[any, any] | null>([dayjs().subtract(6, 'day'), dayjs()]);
   const [loading, setLoading] = useState(false);
+  const [badgeWallKey, setBadgeWallKey] = useState(0); // 用于强制刷新勋章墙
   
   const {
     userStats,
@@ -120,6 +122,27 @@ const Profile: React.FC = () => {
     userStats?.totalTeams || 0,
     userStats?.totalFavorites || 0
   );
+
+  // 获取当前标签页的标题
+  const getTabTitle = (key: string) => {
+    const titles: Record<string, string> = {
+      stats: '个人统计',
+      votes: '投票历史',
+      teams: '组队历史',
+      favorites: '收藏游戏',
+      badges: '勋章墙'
+    };
+    return titles[key] || '';
+  };
+
+  // 处理标签页切换
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    // 切换到勋章墙时，强制刷新
+    if (key === 'badges') {
+      setBadgeWallKey(prev => prev + 1);
+    }
+  };
 
   // 投票历史表格列配置
   const voteColumns = [
@@ -227,6 +250,9 @@ const Profile: React.FC = () => {
                   <CalendarOutlined style={{ marginRight: 4 }} />
                   注册时间: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN') : '未知'}
                 </Text>
+                <Text style={{ color: '#1890ff' }}>
+                  当前查看: {getTabTitle(activeTab)}
+                </Text>
               </Space>
               {/* 等级进度条 */}
               <div className="user-level-progress">
@@ -264,6 +290,11 @@ const Profile: React.FC = () => {
 
       {/* 统计数据卡片 */}
       <Row gutter={16} className="stats-row">
+        <Col span={24} style={{ textAlign: 'right', marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            统计数据会定期自动更新
+          </Text>
+        </Col>
         <Col xs={12} sm={6}>
           <Card>
             <Statistic
@@ -319,7 +350,60 @@ const Profile: React.FC = () => {
           </Space>
         </div>
 
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
+        <Tabs activeKey={activeTab} onChange={handleTabChange}>
+          {/* 个人统计放在第一个 */}
+          <TabPane tab={
+            <span>
+              <StarOutlined />
+              个人统计
+            </span>
+          } key="stats">
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8}>
+                <Card title="投票偏好分析" size="small">
+                  <div className="stat-item">
+                    <Text type="secondary">最喜欢的游戏类型：</Text>
+                    <br />
+                    <Text strong>{userStats?.favoriteCategory || '暂无数据'}</Text>
+                  </div>
+                  <div className="stat-item">
+                    <Text type="secondary">平均评分：</Text>
+                    <br />
+                    <Rate disabled value={userStats?.averageRating || 0} allowHalf />
+                  </div>
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={8}>
+                <Card title="组队统计" size="small">
+                  <div className="stat-item">
+                    <Text type="secondary">担任队长次数：</Text>
+                    <br />
+                    <Text strong>{userStats?.leaderCount || 0} 次</Text>
+                  </div>
+                  <div className="stat-item">
+                    <Text type="secondary">参与成员次数：</Text>
+                    <br />
+                    <Text strong>{userStats?.memberCount || 0} 次</Text>
+                  </div>
+                </Card>
+              </Col>
+              <Col xs={24} sm={24} md={8}>
+                <Card title="活跃度分析" size="small">
+                  <div className="stat-item">
+                    <Text type="secondary">最活跃时间段：</Text>
+                    <br />
+                    <Text strong>{userStats?.mostActiveTime || '暂无数据'}</Text>
+                  </div>
+                  <div className="stat-item">
+                    <Text type="secondary">连续活跃天数：</Text>
+                    <br />
+                    <Text strong>{userStats?.consecutiveDays || 0} 天</Text>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </TabPane>
+
           <TabPane tab={
             <span>
               <CalendarOutlined />
@@ -410,56 +494,21 @@ const Profile: React.FC = () => {
             />
           </TabPane>
 
+          {/* 新增勋章墙标签页 */}
           <TabPane tab={
             <span>
-              <StarOutlined />
-              个人统计
+              <TrophyOutlined />
+              勋章墙
             </span>
-          } key="stats">
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8}>
-                <Card title="投票偏好分析" size="small">
-                  <div className="stat-item">
-                    <Text type="secondary">最喜欢的游戏类型：</Text>
-                    <br />
-                    <Text strong>{userStats?.favoriteCategory || '暂无数据'}</Text>
-                  </div>
-                  <div className="stat-item">
-                    <Text type="secondary">平均评分：</Text>
-                    <br />
-                    <Rate disabled value={userStats?.averageRating || 0} allowHalf />
-                  </div>
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} md={8}>
-                <Card title="组队统计" size="small">
-                  <div className="stat-item">
-                    <Text type="secondary">担任队长次数：</Text>
-                    <br />
-                    <Text strong>{userStats?.leaderCount || 0} 次</Text>
-                  </div>
-                  <div className="stat-item">
-                    <Text type="secondary">参与成员次数：</Text>
-                    <br />
-                    <Text strong>{userStats?.memberCount || 0} 次</Text>
-                  </div>
-                </Card>
-              </Col>
-              <Col xs={24} sm={24} md={8}>
-                <Card title="活跃度分析" size="small">
-                  <div className="stat-item">
-                    <Text type="secondary">最活跃时间段：</Text>
-                    <br />
-                    <Text strong>{userStats?.mostActiveTime || '暂无数据'}</Text>
-                  </div>
-                  <div className="stat-item">
-                    <Text type="secondary">连续活跃天数：</Text>
-                    <br />
-                    <Text strong>{userStats?.consecutiveDays || 0} 天</Text>
-                  </div>
-                </Card>
-              </Col>
-            </Row>
+          } key="badges">
+            {user && (
+              <BadgeWall
+                key={badgeWallKey}
+                userId={user.objectId}
+                username={user.username}
+                isOwner={true}
+              />
+            )}
           </TabPane>
         </Tabs>
       </Card>

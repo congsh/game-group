@@ -34,7 +34,8 @@ import {
   EyeInvisibleOutlined,
   EyeOutlined,
   FileOutlined,
-  MessageOutlined
+  MessageOutlined,
+  TrophyOutlined
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/auth';
 import { useMessageBoardStore } from '../../store/messages';
@@ -91,6 +92,12 @@ const menuItems = [
     label: '数据报表',
     title: '数据统计报表'
   },
+  {
+    key: '/badges',
+    icon: <TrophyOutlined />,
+    label: '勋章墙',
+    title: '勋章墙'
+  }
 ];
 
 // 面包屑路径映射
@@ -102,6 +109,7 @@ const breadcrumbMap: Record<string, string[]> = {
   '/files': ['首页', '文件分享'],
   '/messages': ['首页', '留言板'],
   '/reports': ['首页', '数据报表'],
+  '/badges': ['首页', '勋章墙'],
   '/profile': ['首页', '个人中心'],
 };
 
