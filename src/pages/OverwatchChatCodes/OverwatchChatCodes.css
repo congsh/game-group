@@ -1,0 +1,333 @@
+/**
+ * 守望先锋聊天代码工具样式
+ */
+
+.overwatch-chat-codes {
+  padding: 24px;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.page-header .ant-typography {
+  color: white !important;
+}
+
+/* 预览区域 */
+.preview-section {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.preview-content {
+  margin-top: 12px;
+}
+
+.preview-text {
+  padding: 12px;
+  background: #1a1a1a;
+  color: #ffffff;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+}
+
+.preview-code {
+  padding: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #666;
+  word-break: break-all;
+}
+
+.error-message {
+  margin-top: 8px;
+  padding: 8px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+}
+
+/* 元素区域 */
+.elements-section {
+  margin-bottom: 16px;
+}
+
+.elements-section .ant-list-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.elements-section .ant-list-item:last-child {
+  border-bottom: none;
+}
+
+/* 颜色网格 */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.color-grid .ant-btn {
+  height: 40px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.color-grid .ant-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* 表情网格 */
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.emoji-grid .ant-btn {
+  height: 40px;
+  border-radius: 6px;
+  text-align: left;
+  transition: all 0.3s ease;
+}
+
+.emoji-grid .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 自定义颜色输入 */
+.custom-color-input {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+}
+
+.custom-color-input .ant-typography {
+  margin-bottom: 8px;
+}
+
+/* 文本输入区域 */
+.text-input-section {
+  padding: 16px;
+}
+
+.text-input-section .ant-typography {
+  margin-bottom: 12px;
+}
+
+/* 过滤区域 */
+.filter-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 6px;
+}
+
+/* 收藏列表 */
+.ant-list-item-meta-title {
+  font-weight: 500;
+  color: #262626;
+}
+
+.ant-list-item-meta-description {
+  color: #8c8c8c;
+  line-height: 1.4;
+}
+
+/* 标签样式 */
+.ant-tag {
+  margin: 2px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+/* 操作按钮样式 */
+.ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+/* 卡片样式 */
+.ant-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  border-radius: 12px 12px 0 0;
+}
+
+.ant-card-head-title {
+  font-weight: 600;
+  color: #262626;
+}
+
+/* 折叠面板 */
+.ant-collapse {
+  background: transparent;
+  border: none;
+}
+
+.ant-collapse-item {
+  margin-bottom: 8px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ant-collapse-header {
+  background: #fafafa;
+  border-radius: 8px 8px 0 0;
+  font-weight: 500;
+}
+
+.ant-collapse-content {
+  border-top: 1px solid #f0f0f0;
+}
+
+/* 标签页 */
+.ant-tabs-tab {
+  border-radius: 6px 6px 0 0;
+  font-weight: 500;
+}
+
+.ant-tabs-tab-active {
+  color: #1890ff !important;
+}
+
+.ant-tabs-ink-bar {
+  background: linear-gradient(90deg, #1890ff 0%, #096dd9 100%);
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* 空状态 */
+.ant-empty {
+  padding: 32px 16px;
+}
+
+.ant-empty-description {
+  color: #bfbfbf;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .overwatch-chat-codes {
+    padding: 16px;
+  }
+  
+  .page-header {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .color-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+  }
+  
+  .emoji-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 6px;
+  }
+  
+  .preview-text {
+    font-size: 12px;
+    padding: 8px;
+    min-height: 40px;
+  }
+  
+  .preview-code {
+    font-size: 10px;
+    padding: 6px;
+  }
+  
+  .custom-color-input {
+    padding: 12px;
+  }
+  
+  .text-input-section {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .color-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 4px;
+  }
+  
+  .emoji-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 4px;
+  }
+  
+  .color-grid .ant-btn,
+  .emoji-grid .ant-btn {
+    height: 36px;
+    font-size: 12px;
+    padding: 0 8px;
+  }
+  
+  .page-header h2 {
+    font-size: 20px;
+  }
+  
+  .ant-card-head-title {
+    font-size: 14px;
+  }
+} 
