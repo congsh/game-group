@@ -1,0 +1,202 @@
+/**
+ * 图标浏览器样式
+ */
+
+.icon-browser {
+  min-height: 400px;
+}
+
+.icon-browser .ant-card-body {
+  padding: 12px;
+}
+
+.icon-browser .ant-card-cover {
+  position: relative;
+  overflow: hidden;
+}
+
+.icon-browser .ant-image {
+  transition: transform 0.2s ease;
+}
+
+.icon-browser .ant-card:hover .ant-image {
+  transform: scale(1.1);
+}
+
+.icon-browser .ant-card-actions {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+}
+
+.icon-browser .ant-card-actions .ant-btn {
+  border: none;
+  background: transparent;
+}
+
+.icon-browser .ant-card-actions .ant-btn:hover {
+  background: rgba(24, 144, 255, 0.1);
+  color: #1890ff;
+}
+
+/* 图标卡片悬停效果 */
+.icon-browser .ant-card {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.icon-browser .ant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 图标背景设为黑色，便于查看白色图标 */
+.icon-browser .ant-card-cover {
+  background: #000 !important;
+}
+
+/* 图标图片样式 */
+.icon-browser .ant-card-cover img {
+  transition: transform 0.2s ease;
+  background: transparent !important;
+}
+
+.icon-browser .ant-card:hover .ant-card-cover img {
+  transform: scale(1.1);
+}
+
+/* 图标占位符样式 */
+.icon-browser .icon-placeholder {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f0f0, #e8e8e8);
+  color: #666;
+  font-size: 10px;
+  font-family: monospace;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  transition: all 0.2s ease;
+}
+
+/* 状态徽章样式 */
+.icon-browser .ant-badge {
+  font-size: 10px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-weight: 500;
+}
+
+/* 收藏按钮样式 */
+.icon-browser .favorite-button {
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.icon-browser .favorite-button:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: scale(1.1);
+}
+
+/* 加载状态样式 */
+.icon-browser .loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #8c8c8c;
+}
+
+.icon-browser .loading-container .ant-spin {
+  margin-bottom: 16px;
+}
+
+/* 工具栏样式 */
+.icon-browser .toolbar {
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.icon-browser .toolbar .ant-input {
+  border-radius: 6px;
+}
+
+.icon-browser .toolbar .ant-select {
+  border-radius: 6px;
+}
+
+.icon-browser .toolbar .ant-switch {
+  margin-right: 8px;
+}
+
+/* 统计信息样式 */
+.icon-browser .stats {
+  padding: 8px 0;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 12px;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .icon-browser .ant-col {
+    padding: 4px;
+  }
+  
+  .icon-browser .ant-card-body {
+    padding: 8px;
+  }
+  
+  .icon-browser .toolbar {
+    padding: 12px;
+  }
+  
+  .icon-browser .toolbar .ant-space {
+    width: 100%;
+  }
+  
+  .icon-browser .toolbar .ant-space-item {
+    width: 100%;
+  }
+}
+
+/* 分页样式 */
+.icon-browser .ant-pagination {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.icon-browser .ant-pagination-item {
+  border-radius: 6px;
+}
+
+.icon-browser .ant-pagination-item:hover {
+  border-color: #1890ff;
+}
+
+.icon-browser .ant-pagination-item-active {
+  background: #1890ff;
+  border-color: #1890ff;
+}
+
+/* 空状态样式 */
+.icon-browser .ant-empty {
+  margin: 40px 0;
+}
+
+.icon-browser .ant-empty-description {
+  color: #8c8c8c;
+}
+
+/* 错误提示样式 */
+.icon-browser .ant-alert {
+  border-radius: 6px;
+  margin-bottom: 16px;
+} 

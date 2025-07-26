@@ -220,7 +220,8 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         category: fileCategory,
         tags: tags,
         allowDownload: values.allowDownload !== false,
-        allowComment: values.allowComment !== false
+        allowComment: values.allowComment !== false,
+        isPublic: values.isPublic !== false
       };
 
       await fileShareService.uploadAndShareFile(

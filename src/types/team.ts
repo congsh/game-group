@@ -43,6 +43,8 @@ export interface JoinTeamForm {
 export interface TeamFilters {
   gameId?: string;
   eventDate?: string;
+  startDate?: string;     // 开始日期筛选 (YYYY-MM-DD)
+  endDate?: string;       // 结束日期筛选 (YYYY-MM-DD)
   status?: 'open' | 'full' | 'closed';
   sortBy?: 'eventDate' | 'createdAt' | 'memberCount' | 'startTime';  // 扩展排序选项
   sortOrder?: 'asc' | 'desc';

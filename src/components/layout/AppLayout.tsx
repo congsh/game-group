@@ -35,7 +35,8 @@ import {
   EyeOutlined,
   FileOutlined,
   MessageOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  CodeOutlined
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/auth';
 import { useMessageBoardStore } from '../../store/messages';
@@ -97,6 +98,12 @@ const menuItems = [
     icon: <TrophyOutlined />,
     label: '勋章墙',
     title: '勋章墙'
+  },
+  {
+    key: '/chat-codes',
+    icon: <CodeOutlined />,
+    label: '聊天代码',
+    title: '守望先锋聊天代码'
   }
 ];
 
@@ -110,6 +117,7 @@ const breadcrumbMap: Record<string, string[]> = {
   '/messages': ['首页', '留言板'],
   '/reports': ['首页', '数据报表'],
   '/badges': ['首页', '勋章墙'],
+  '/chat-codes': ['首页', '聊天代码'],
   '/profile': ['首页', '个人中心'],
 };
 
