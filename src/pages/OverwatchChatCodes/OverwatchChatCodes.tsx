@@ -428,6 +428,20 @@ const OverwatchChatCodes: React.FC = () => {
         <Text type="secondary">
           搜索并选择元素，直接插入到聊天代码中
         </Text>
+        <div style={{ marginTop: 12 }}>
+          <Text type="secondary">
+            💡 更多工具：
+            <a 
+              href="https://ow.mapleqaq.top/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ marginLeft: 4 }}
+            >
+              守望先锋聊天编辑器
+            </a>
+            （可视化编辑、渐变文字、纹理图案）
+          </Text>
+        </div>
       </div>
 
       <Row gutter={[24, 24]}>

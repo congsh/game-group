@@ -2323,4 +2323,329 @@ isFavorite: true // 打开模态框就是要收藏
 
 ---
 
+### 2025年1月8日 - 颜色代码透明度处理优化
+
+**问题描述**：用户反馈自定义颜色的透明度处理不够直观，希望直接使用颜色选择器的透明度滑块。
+
+**主要改进**：
+
+1. **ColorPicker 透明度支持**：
+   ```tsx
+   <ColorPicker
+     disabledAlpha={false}  // 启用透明度滑块
+     allowClear
+     placement="bottomLeft"
+     onChange={(color) => {
+       const rgba = color.toRgb();
+       // 手动构建HEX颜色，避免格式问题
+       const r = Math.round(rgba.r).toString(16).padStart(2, '0').toUpperCase();
+       const g = Math.round(rgba.g).toString(16).padStart(2, '0').toUpperCase();
+       const b = Math.round(rgba.b).toString(16).padStart(2, '0').toUpperCase();
+       const alphaValue = Math.round(rgba.a * 255);
+       const alpha = alphaValue.toString(16).padStart(2, '0').toUpperCase();
+       const colorWithAlpha = `#${r}${g}${b}${alpha}`;
+     }}
+   />
+   ```
+
+2. **格式统一**：
+   - 所有颜色代码统一使用大写格式
+   - Input输入自动转换为大写：`onChange={(e) => setCustomColor(e.target.value.toUpperCase())}`
+   - 初始值改为包含透明度：`useState('#FF0000FF')`
+
+3. **问题修复**：
+   - 修复透明度滑块导致颜色变成黑白的问题
+   - 修复出现两个大写格式的问题
+   - 手动构建HEX颜色避免`toHexString()`的格式冲突
+
+**用户体验提升**：
+
+- 🎨 **直观操作**：直接使用颜色选择器的透明度滑块
+- 📏 **格式统一**：所有颜色代码统一大写格式  
+- 💡 **清晰说明**：透明度值含义一目了然
+- ⚡ **实时反馈**：选择颜色后立即更新预览
+
+---
+
+### 2025年1月8日 - 批量导入收藏代码功能
+
+**需求描述**：用户希望能够批量导入聊天代码和备注，支持`<TXC...> 代码 + 备注`的格式。
+
+**主要功能**：
+
+1. **批量导入界面**：
+   ```tsx
+   <Modal title="批量导入收藏代码" width={600}>
+     <Input.TextArea
+       placeholder="请输入要导入的代码和备注，例如：
+   <TXC000000000402CE> 花男
+   <TXC0000000002A9FE> sad face"
+       rows={8}
+       maxLength={10000}
+     />
+   </Modal>
+   ```
+
+2. **解析逻辑**：
+   - 支持单行多个代码：`<TXC...> 备注1 <TXC...> 备注2`
+   - 支持换行分隔：每行一个或多个代码+备注
+   - 智能提取备注：从代码后到下一个代码或行尾的文本
+   - 正则匹配：`/<TXC([0-9A-Fa-f]{11,14})>/g`
+
+3. **数据存储**：
+   ```typescript
+   // 生成唯一ID避免冲突
+   const customCodeId = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+   addOrUpdatePersonalNote({
+     codeId: customCodeId,
+     codeType: 'custom',
+     customCode: code,      // 完整的<TXC...>格式
+     note: noteText || '',  // 解析的备注文本
+     isFavorite: true
+   });
+   ```
+
+**支持格式**：
+
+- ✅ 单个代码：`<TXC000000000402CE> 花男`
+- ✅ 多个代码同行：`<TXC...> 备注1 <TXC...> 备注2`
+- ✅ 换行分隔：多行混合格式
+- ✅ 灵活备注：支持中英文、符号、空格
+
+**用户体验提升**：
+
+- 📋 **批量操作**：一次性导入大量收藏代码
+- 🎯 **智能解析**：自动提取代码和备注
+- 📝 **格式灵活**：支持多种输入格式
+- ⚡ **快速导入**：替代逐个手动添加的繁琐操作
+
+这个功能大大提升了收藏管理的效率，特别适合从其他地方批量导入聊天代码集合。
+
+---
+
+### 2025年1月8日 - 修复批量导入代码ID错误
+
+**问题描述**：用户反馈批量导入生成的代码ID不正确，显示为`custom_1753536551211_gkypxt8u7`这样的随机ID，而不是真实的聊天代码ID。
+
+**根本原因**：
+- 批量导入时错误地使用了随机生成的`customCodeId`
+- 正确的做法应该是使用解析出的聊天代码ID作为`codeId`
+
+**修复方案**：
+
+```typescript
+// 修复前：使用随机ID
+const customCodeId = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+addOrUpdatePersonalNote({
+  codeId: customCodeId, // ❌ 错误：随机ID
+  codeType: 'custom',
+  customCode: code,
+  // ...
+});
+
+// 修复后：使用真实的聊天代码ID
+addOrUpdatePersonalNote({
+  codeId: codeId, // ✅ 正确：解析出的真实ID (如：000000000402CE)
+  codeType: 'custom',
+  customCode: code, // 保存完整的<TXC...>格式用于显示
+  // ...
+});
+```
+
+**修复效果**：
+
+- ✅ **正确ID显示**：现在显示真实的聊天代码ID，如`000000000402CE`
+- ✅ **收藏匹配**：批量导入的代码能正确在"只看收藏"模式中显示
+- ✅ **一致性保证**：手动添加和批量导入的数据结构完全一致
+- ✅ **数据整洁**：避免了无意义的随机ID污染数据
+
+**技术细节**：
+
+解析逻辑保持不变：
+```typescript
+const codeRegex = /<TXC([0-9A-Fa-f]{11,14})>/g;
+while ((match = codeRegex.exec(line)) !== null) {
+  const code = match[0];     // 完整代码：<TXC000000000402CE>
+  const codeId = match[1].toUpperCase(); // 提取ID：000000000402CE
+  // 使用codeId作为存储键，code作为显示值
+}
+```
+
+这个修复确保了批量导入功能的数据完整性和正确性，让批量导入的代码与手动添加的代码行为完全一致。
+
+---
+
+### 2025年1月8日 - 修复收藏复制位数错误
+
+**问题描述**：用户反馈从收藏列表复制的聊天代码位数不对，不是正确的14位格式。
+
+**根本原因**：
+- 复制功能中仍在使用旧的11位格式：`padStart(11, '0')`
+- 没有正确使用批量导入时保存的`customCode`字段
+- 官方图标的复制也使用了错误的位数
+
+**修复方案**：
+
+```typescript
+// 修复前：使用11位格式
+const iconId = fav.codeId.padStart(11, '0');
+code = `<TXC${iconId}>`;
+
+// 修复后：使用14位格式并优先使用保存的完整代码
+if (fav.codeType === 'custom' && (fav as any).customCode) {
+  // 使用原始保存的完整代码
+  code = (fav as any).customCode;
+} else {
+  // 从codeId构建14位格式的代码
+  let iconId = fav.codeId;
+  if (iconId.length < 14) {
+    iconId = iconId.padStart(14, '0');
+  } else if (iconId.length > 14) {
+    iconId = iconId.substring(iconId.length - 14);
+  }
+  code = `<TXC${iconId}>`;
+}
+```
+
+**修复效果**：
+
+- ✅ **正确位数**：所有复制的代码都是14位格式
+- ✅ **保持原码**：批量导入的代码优先使用原始完整格式
+- ✅ **统一标准**：手动添加和批量导入的代码复制行为一致
+- ✅ **游戏可用**：复制的代码能在游戏中正常使用
+
+**技术细节**：
+
+复制逻辑的优化：
+1. **优先使用完整代码**：如果是自定义收藏且有`customCode`字段，直接使用
+2. **标准化处理**：对于其他情况，统一转换为14位格式
+3. **向后兼容**：支持各种长度的已有收藏数据
+
+这个修复确保了所有从收藏列表复制的聊天代码都能在守望先锋游戏中正常使用。
+
+---
+
+### 2025年1月8日 - 修复"只看收藏"功能的数据处理问题
+
+**问题描述**：用户提出检查"只看收藏"功能是否也存在代码处理问题。经过检查发现确实存在数据结构不匹配的问题。
+
+**根本原因**：
+- 批量导入功能改变了数据存储结构，使用`codeId`存储真实ID，`customCode`存储完整代码
+- 但"只看收藏"功能还在使用旧的逻辑，期望`codeId`包含`<TXC...>`格式
+- `isFavorite`函数和`handleIconSelect`函数也需要适配新的数据结构
+
+**修复方案**：
+
+1. **修复虚拟texture创建逻辑**：
+   ```typescript
+   // 支持多种数据格式
+   if ((fav as any).customCode) {
+     // 批量导入的新格式：从customCode解析
+     const iconMatch = (fav as any).customCode.match(/<TXC([A-Fa-f0-9]{11,14})>/);
+   } else {
+     // 旧格式：从codeId解析
+     const iconMatch = fav.codeId.match(/<TXC([A-Fa-f0-9]{11,14})>/);
+     // 或者codeId就是图标ID
+     if (fav.codeId.match(/^[A-Fa-f0-9]{11,14}$/)) {
+       iconId = fav.codeId.toUpperCase();
+     }
+   }
+   ```
+
+2. **修复isFavorite函数**：
+   ```typescript
+   // 支持新旧数据格式的收藏检查
+   if ((fav as any).customCode) {
+     const iconMatch = (fav as any).customCode.match(/<TXC([A-Fa-f0-9]{11,14})>/);
+     if (iconMatch) iconId = iconMatch[1].toUpperCase();
+   } else {
+     // 兼容旧格式
+     const iconMatch = fav.codeId.match(/<TXC([A-Fa-f0-9]{11,14})>/);
+     if (iconMatch) {
+       iconId = iconMatch[1].toUpperCase();
+     } else if (fav.codeId.match(/^[A-Fa-f0-9]{11,14}$/)) {
+       iconId = fav.codeId.toUpperCase();
+     }
+   }
+   ```
+
+3. **修复handleIconSelect函数**：
+   ```typescript
+   if (virtualTexture.originalFavorite) {
+     const fav = virtualTexture.originalFavorite;
+     if (fav.customCode) {
+       chatCode = fav.customCode; // 优先使用完整代码
+     } else if (fav.codeId.startsWith('<TXC')) {
+       chatCode = fav.codeId;
+     } else {
+       // 从codeId构建14位格式代码
+       let iconId = fav.codeId.padStart(14, '0');
+       chatCode = `<TXC${iconId}>`;
+     }
+   }
+   ```
+
+**修复效果**：
+
+- ✅ **完全兼容**：支持批量导入和手动添加的所有收藏数据
+- ✅ **正确显示**：只看收藏模式正确显示所有收藏的图标
+- ✅ **准确检查**：收藏状态检查支持新旧数据格式
+- ✅ **正确复制**：点击收藏图标复制正确的14位代码
+
+**技术细节**：
+
+数据结构适配逻辑：
+1. **优先级处理**：`customCode` > `<TXC...>格式的codeId` > `纯ID格式的codeId`
+2. **ID长度标准化**：统一转换为12位用于图片URL，14位用于聊天代码
+3. **向后兼容**：完全支持旧版本的收藏数据
+
+这个修复确保了"只看收藏"功能能够正确处理所有格式的收藏数据，无论是手动添加还是批量导入的。
+
+---
+
+### 2025年1月8日 - 添加外部工具链接
+
+**需求描述**：用户希望添加一个指向[守望先锋聊天编辑器](https://ow.mapleqaq.top/)的链接，为用户提供更多的聊天代码编辑工具选择。
+
+**实现内容**：
+
+在聊天代码工具页面的标题下方添加了外部工具推荐链接：
+
+```tsx
+<div style={{ marginTop: 12 }}>
+  <Text type="secondary">
+    💡 更多工具：
+    <a 
+      href="https://ow.mapleqaq.top/" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      style={{ marginLeft: 4 }}
+    >
+      守望先锋聊天编辑器
+    </a>
+    （可视化编辑、渐变文字、纹理图案）
+  </Text>
+</div>
+```
+
+**功能特点**：
+
+根据该网站的内容，这个外部工具提供了以下功能：
+- 🎨 **可视化编辑**：实时预览聊天代码效果
+- 🌈 **渐变文字**：支持复杂的文字渐变效果
+- 🖼️ **纹理图案**：丰富的纹理资源（基于Overwatch Item Tracker）
+- 📋 **模板系统**：保存和加载聊天代码模板
+- 📺 **视频教程**：提供使用教程
+
+**用户体验提升**：
+
+- 🔗 **工具互补**：与当前工具形成互补，满足不同用户需求
+- 🆕 **功能扩展**：用户可以使用更高级的编辑功能
+- 🎯 **便捷访问**：在新标签页打开，不影响当前工作流
+- 🔒 **安全性**：使用`rel="noopener noreferrer"`确保安全性
+
+这个外部链接为用户提供了额外的选择，特别是对于需要复杂渐变效果和可视化编辑的用户来说非常有用。
+
+---
+
 *最后更新: 2025年1月8日* 

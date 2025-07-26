@@ -209,22 +209,22 @@ const ViewFavoritesContent: React.FC<ViewFavoritesContentProps> = ({ favorites, 
                   size="small"
                   icon={<CopyOutlined />}
                   onClick={() => {
-                    // 统一复制格式：确保所有图标代码都是 <TXC...> 格式
-                    let code = fav.codeId;
+                    // 统一复制格式：确保所有图标代码都是 <TXC...> 格式（14位）
+                    let code = '';
                     
-                    // 如果是自定义收藏且已经是 <TXC...> 格式，直接使用
-                    if (fav.codeType === 'custom' && code.startsWith('<TXC')) {
-                      // 直接使用原始代码
-                    } else if (fav.codeType === 'custom') {
-                      // 如果自定义收藏不是 <TXC> 格式，尝试转换
-                      const iconMatch = code.match(/([A-Fa-f0-9]{11,12})/);
-                      if (iconMatch) {
-                        const iconId = iconMatch[1].padStart(11, '0');
-                        code = `<TXC${iconId}>`;
-                      }
+                    // 如果是自定义收藏，检查是否有customCode字段
+                    if (fav.codeType === 'custom' && (fav as any).customCode) {
+                      // 使用原始保存的完整代码
+                      code = (fav as any).customCode;
                     } else {
-                      // 官方图标，转换为标准格式
-                      const iconId = fav.codeId.padStart(11, '0');
+                      // 从codeId构建14位格式的代码
+                      let iconId = fav.codeId;
+                      // 确保ID是14位格式
+                      if (iconId.length < 14) {
+                        iconId = iconId.padStart(14, '0');
+                      } else if (iconId.length > 14) {
+                        iconId = iconId.substring(iconId.length - 14);
+                      }
                       code = `<TXC${iconId}>`;
                     }
                     
@@ -345,38 +345,64 @@ const IconBrowser: React.FC<IconBrowserProps> = ({
       const customIconTextures: TextureInfo[] = [];
       
       allFavorites.forEach(fav => {
-        // 检查是否为图标代码格式 <TXCxxxxxxxxxxxxxx> (支持11-14位)
-        const iconMatch = fav.codeId.match(/<TXC([A-Fa-f0-9]{11,14})>/);
-        if (iconMatch && fav.codeType === 'custom') {
-          let iconId = iconMatch[1].toUpperCase();
-          // 如果是14位ID，去掉前2位变成12位用于图片URL
-          if (iconId.length === 14) {
-            iconId = iconId.substring(2);
-          } else if (iconId.length < 12) {
-            iconId = iconId.padStart(12, '0');
+        if (fav.codeType === 'custom') {
+          let iconId = '';
+          let isIconCode = false;
+          
+          // 检查是否有customCode字段（批量导入的数据）
+          if ((fav as any).customCode) {
+            const iconMatch = (fav as any).customCode.match(/<TXC([A-Fa-f0-9]{11,14})>/);
+            if (iconMatch) {
+              iconId = iconMatch[1].toUpperCase();
+              isIconCode = true;
+            }
+          } else {
+            // 检查旧格式：codeId直接包含<TXC...>格式
+            const iconMatch = fav.codeId.match(/<TXC([A-Fa-f0-9]{11,14})>/);
+            if (iconMatch) {
+              iconId = iconMatch[1].toUpperCase();
+              isIconCode = true;
+            } else {
+              // 检查是否codeId就是图标ID（没有<TXC>包装）
+              if (fav.codeId.match(/^[A-Fa-f0-9]{11,14}$/)) {
+                iconId = fav.codeId.toUpperCase();
+                isIconCode = true;
+              }
+            }
           }
-          const iconUrl = `https://assets.overwatchitemtracker.com/textures/${iconId}.png`;
           
-          // 创建虚拟texture对象，保留原始收藏信息
-          const virtualTexture: TextureInfo = {
-            id: iconId,
-            id_raw: parseInt(iconId, 16),
-            version_added_id: 0,
-            version_removed_id: 0,
-            version_updated_id: 0,
-            version_added: '自定义',
-            is_removed: false,
-            is_new: false,
-            is_updated: false,
-            url: iconUrl,
-            // 添加自定义属性以保存原始收藏信息
-            originalFavorite: fav
-          } as TextureInfo & { originalFavorite: any };
-          
-          // 检查这个图标是否已经在官方图标中了
-          const existsInOfficial = favoriteOfficialTextures.some(t => t.id === iconId);
-          if (!existsInOfficial) {
-            customIconTextures.push(virtualTexture);
+          if (isIconCode && iconId) {
+            // 转换为12位用于图片URL
+            let displayId = iconId;
+            if (iconId.length === 14) {
+              displayId = iconId.substring(2);
+            } else if (iconId.length < 12) {
+              displayId = iconId.padStart(12, '0');
+            }
+            
+            const iconUrl = `https://assets.overwatchitemtracker.com/textures/${displayId}.png`;
+            
+            // 创建虚拟texture对象，保留原始收藏信息
+            const virtualTexture: TextureInfo = {
+              id: displayId,
+              id_raw: parseInt(displayId, 16),
+              version_added_id: 0,
+              version_removed_id: 0,
+              version_updated_id: 0,
+              version_added: '自定义',
+              is_removed: false,
+              is_new: false,
+              is_updated: false,
+              url: iconUrl,
+              // 添加自定义属性以保存原始收藏信息
+              originalFavorite: fav
+            } as TextureInfo & { originalFavorite: any };
+            
+            // 检查这个图标是否已经在官方图标中了
+            const existsInOfficial = favoriteOfficialTextures.some(t => t.id === displayId);
+            if (!existsInOfficial) {
+              customIconTextures.push(virtualTexture);
+            }
           }
         }
       });
@@ -404,10 +430,24 @@ const IconBrowser: React.FC<IconBrowserProps> = ({
     // 检查是否是虚拟texture对象（来自自定义收藏）
     const virtualTexture = texture as TextureInfo & { originalFavorite?: any };
     if (virtualTexture.originalFavorite) {
-      // 使用原始收藏的代码
-      chatCode = virtualTexture.originalFavorite.codeId;
+      // 优先使用customCode，否则使用codeId
+      const fav = virtualTexture.originalFavorite;
+      if (fav.customCode) {
+        chatCode = fav.customCode;
+      } else if (fav.codeId.startsWith('<TXC')) {
+        chatCode = fav.codeId;
+      } else {
+        // 从codeId构建14位格式的代码
+        let iconId = fav.codeId;
+        if (iconId.length < 14) {
+          iconId = iconId.padStart(14, '0');
+        } else if (iconId.length > 14) {
+          iconId = iconId.substring(iconId.length - 14);
+        }
+        chatCode = `<TXC${iconId}>`;
+      }
     } else {
-      // 生成标准聊天代码
+      // 生成标准聊天代码（14位）
       chatCode = generateChatCode(texture.id);
     }
     
@@ -479,19 +519,38 @@ const IconBrowser: React.FC<IconBrowserProps> = ({
     }
     
     // 检查是否是自定义收藏的图标代码
-    const allFavorites = loadPersonalNotes().filter(n => n.isFavorite);
+    const allFavorites = loadPersonalNotes().filter(n => n.isFavorite && n.codeType === 'custom');
     return allFavorites.some(fav => {
-      const iconMatch = fav.codeId.match(/<TXC([A-Fa-f0-9]{11,14})>/);
-      if (iconMatch && fav.codeType === 'custom') {
-        let iconId = iconMatch[1].toUpperCase();
-        // 如果是14位ID，去掉前2位变成12位用于比较
-        if (iconId.length === 14) {
-          iconId = iconId.substring(2);
-        } else if (iconId.length < 12) {
-          iconId = iconId.padStart(12, '0');
+      let iconId = '';
+      
+      // 检查是否有customCode字段（批量导入的数据）
+      if ((fav as any).customCode) {
+        const iconMatch = (fav as any).customCode.match(/<TXC([A-Fa-f0-9]{11,14})>/);
+        if (iconMatch) {
+          iconId = iconMatch[1].toUpperCase();
         }
-        return iconId === texture.id;
+      } else {
+        // 检查旧格式：codeId直接包含<TXC...>格式
+        const iconMatch = fav.codeId.match(/<TXC([A-Fa-f0-9]{11,14})>/);
+        if (iconMatch) {
+          iconId = iconMatch[1].toUpperCase();
+        } else if (fav.codeId.match(/^[A-Fa-f0-9]{11,14}$/)) {
+          // codeId就是图标ID
+          iconId = fav.codeId.toUpperCase();
+        }
       }
+      
+      if (iconId) {
+        // 转换为12位用于比较
+        let compareId = iconId;
+        if (iconId.length === 14) {
+          compareId = iconId.substring(2);
+        } else if (iconId.length < 12) {
+          compareId = iconId.padStart(12, '0');
+        }
+        return compareId === texture.id;
+      }
+      
       return false;
     });
   }, []);
@@ -603,7 +662,70 @@ const IconBrowser: React.FC<IconBrowserProps> = ({
   }, [getAllFavorites]);
 
   /**
-   * 导入收藏数据
+   * 批量导入文本格式的收藏数据
+   */
+  const [batchImportModalVisible, setBatchImportModalVisible] = useState(false);
+  const [batchImportText, setBatchImportText] = useState('');
+
+  const handleBatchImport = useCallback(() => {
+    setBatchImportModalVisible(true);
+  }, []);
+
+  const handleConfirmBatchImport = useCallback(() => {
+    if (!batchImportText.trim()) {
+      message.warning('请输入要导入的代码和备注');
+      return;
+    }
+
+    try {
+      const lines = batchImportText.split('\n').filter(line => line.trim());
+      let importedCount = 0;
+
+      lines.forEach(line => {
+        // 匹配格式：<TXC...> 备注 或 <TXC...> 备注 <TXC...> 备注
+        const codeRegex = /<TXC([0-9A-Fa-f]{11,14})>/g;
+        let match;
+        let lastIndex = 0;
+
+        while ((match = codeRegex.exec(line)) !== null) {
+          const code = match[0];
+          const codeId = match[1].toUpperCase();
+          
+          // 查找这个代码后面的备注（到下一个代码或行尾）
+          const nextCodeIndex = line.indexOf('<TXC', match.index + match[0].length);
+          const noteEndIndex = nextCodeIndex === -1 ? line.length : nextCodeIndex;
+          const noteText = line.substring(match.index + match[0].length, noteEndIndex).trim();
+
+          if (code && codeId) {
+            // 直接使用解析出的聊天代码ID作为codeId
+            addOrUpdatePersonalNote({
+              codeId: codeId, // 使用真实的聊天代码ID
+              codeType: 'custom',
+              customCode: code, // 保存完整的<TXC...>格式用于显示
+              note: noteText || '',
+              tags: [],
+              isFavorite: true
+            });
+            importedCount++;
+          }
+        }
+      });
+
+      if (importedCount > 0) {
+        message.success(`成功导入 ${importedCount} 条收藏数据`);
+        setBatchImportText('');
+        setBatchImportModalVisible(false);
+      } else {
+        message.warning('未找到有效的代码格式，请检查输入');
+      }
+    } catch (error) {
+      console.error('批量导入失败:', error);
+      message.error('导入失败，请检查输入格式');
+    }
+  }, [batchImportText]);
+
+  /**
+   * 导入收藏数据（JSON文件）
    */
   const handleImportFavorites = useCallback(() => {
     const input = document.createElement('input');
@@ -756,7 +878,15 @@ const IconBrowser: React.FC<IconBrowserProps> = ({
                 icon={<ImportOutlined />} 
                 onClick={handleImportFavorites}
               >
-                导入
+                导入JSON
+              </Button>
+              
+              <Button 
+                size="small" 
+                icon={<PlusOutlined />} 
+                onClick={handleBatchImport}
+              >
+                批量导入
               </Button>
             </Space>
           </Col>
@@ -1159,6 +1289,40 @@ const IconBrowser: React.FC<IconBrowserProps> = ({
                 message.success('已取消收藏');
               }
             }}
+          />
+        </Modal>
+
+        {/* 批量导入模态框 */}
+        <Modal
+          title="批量导入收藏代码"
+          open={batchImportModalVisible}
+          onOk={handleConfirmBatchImport}
+          onCancel={() => {
+            setBatchImportModalVisible(false);
+            setBatchImportText('');
+          }}
+          okText="导入"
+          cancelText="取消"
+          width={600}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <Typography.Text strong>支持的格式：</Typography.Text>
+            <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
+              • 每行一个或多个代码+备注：<code>&lt;TXC000000000402CE&gt; 花男</code><br/>
+              • 多个代码可在同一行：<code>&lt;TXC...&gt; 备注1 &lt;TXC...&gt; 备注2</code><br/>
+              • 支持换行分隔多组代码
+            </div>
+          </div>
+          <Input.TextArea
+            value={batchImportText}
+            onChange={(e) => setBatchImportText(e.target.value)}
+            placeholder="请输入要导入的代码和备注，例如：
+<TXC000000000402CE> 花男
+<TXC0000000002A9FE> sad face
+<TXC000000000207B9> 补给箱"
+            rows={8}
+            maxLength={10000}
+            showCount
           />
         </Modal>
       </div>
