@@ -33,9 +33,12 @@ import {
   SearchOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
-  FileOutlined
+  FileOutlined,
+  MessageOutlined,
+  TrophyOutlined
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/auth';
+import { useMessageBoardStore } from '../../store/messages';
 import './AppLayout.css';
 
 const { Header, Sider, Content } = Layout;
@@ -78,11 +81,23 @@ const menuItems = [
     title: '文件分享论坛'
   },
   {
+    key: '/messages',
+    icon: <MessageOutlined />,
+    label: '留言板',
+    title: '留言板'
+  },
+  {
     key: '/reports',
     icon: <BarChartOutlined />,
     label: '数据报表',
     title: '数据统计报表'
   },
+  {
+    key: '/badges',
+    icon: <TrophyOutlined />,
+    label: '勋章墙',
+    title: '勋章墙'
+  }
 ];
 
 // 面包屑路径映射
@@ -92,7 +107,9 @@ const breadcrumbMap: Record<string, string[]> = {
   '/vote': ['首页', '每日投票'],
   '/teams': ['首页', '游戏组队'],
   '/files': ['首页', '文件分享'],
+  '/messages': ['首页', '留言板'],
   '/reports': ['首页', '数据报表'],
+  '/badges': ['首页', '勋章墙'],
   '/profile': ['首页', '个人中心'],
 };
 
@@ -102,6 +119,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isMobile, setIsMobile] = useState(false); // 是否为移动端
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // 移动端菜单是否打开
   const { user, logout } = useAuthStore();
+  const { unreadCount, updateUnreadCount } = useMessageBoardStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = antdTheme.useToken();
@@ -126,6 +144,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       setMobileMenuOpen(false);
     }
   }, [location.pathname, isMobile]);
+
+  // 定期更新未读通知数量
+  useEffect(() => {
+    if (user) {
+      updateUnreadCount();
+      // 每30秒更新一次未读通知数量
+      const interval = setInterval(() => {
+        updateUnreadCount();
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [user, updateUnreadCount]);
 
   // 获取当前选中的菜单项
   const selectedKeys = [location.pathname];
@@ -279,11 +310,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
               {/* 通知按钮 */}
               <Tooltip title="通知">
-                <Badge count={0} size="small">
+                <Badge count={unreadCount} size="small">
                   <Button 
                     type="text" 
                     icon={<BellOutlined />} 
                     className="header-btn"
+                    onClick={() => navigate('/messages')}
                   />
                 </Badge>
               </Tooltip>

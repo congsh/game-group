@@ -219,7 +219,6 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         description: values.description,
         category: fileCategory,
         tags: tags,
-        isPublic: values.isPublic !== false,
         allowDownload: values.allowDownload !== false,
         allowComment: values.allowComment !== false
       };
@@ -447,7 +446,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
               <Switch disabled={uploading} />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={12}>
             <Form.Item
               name="allowComment"
               label="允许评论"

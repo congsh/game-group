@@ -229,6 +229,157 @@ export const initUserFavoriteTable = async (): Promise<void> => {
 };
 
 /**
+ * 初始化 Message 数据表
+ */
+export const initMessageTable = async (): Promise<void> => {
+  try {
+    // 获取当前用户
+    const currentUser = AV.User.current();
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+
+    console.log('开始创建Message表结构...');
+
+    // 直接创建一个临时的 Message 记录来建立数据表结构
+    const MessageClass = AV.Object.extend('Message');
+    const placeholderMessage = new MessageClass();
+    
+    placeholderMessage.set('content', '_PLACEHOLDER_MESSAGE_');
+    placeholderMessage.set('authorId', currentUser.id);
+    placeholderMessage.set('authorName', currentUser.get('username'));
+    placeholderMessage.set('mentionedUsers', []);
+    
+    const savedMessage = await placeholderMessage.save();
+    console.log('Message表创建成功');
+    
+    // 立即删除占位符记录
+    await savedMessage.destroy();
+    console.log('清理占位符记录完成');
+    
+    console.log('Message表初始化完成');
+  } catch (error: any) {
+    console.error('初始化Message表失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 初始化 MessageNotification 数据表
+ */
+export const initMessageNotificationTable = async (): Promise<void> => {
+  try {
+    // 获取当前用户
+    const currentUser = AV.User.current();
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+
+    console.log('开始创建MessageNotification表结构...');
+
+    // 直接创建一个临时的 MessageNotification 记录来建立数据表结构
+    const MessageNotificationClass = AV.Object.extend('MessageNotification');
+    const placeholderNotification = new MessageNotificationClass();
+    
+    placeholderNotification.set('messageId', '_PLACEHOLDER_MESSAGE_ID_');
+    placeholderNotification.set('recipientId', currentUser.id);
+    placeholderNotification.set('senderId', currentUser.id);
+    placeholderNotification.set('senderName', currentUser.get('username'));
+    placeholderNotification.set('messageContent', '_PLACEHOLDER_CONTENT_');
+    placeholderNotification.set('isRead', false);
+    
+    const savedNotification = await placeholderNotification.save();
+    console.log('MessageNotification表创建成功');
+    
+    // 立即删除占位符记录
+    await savedNotification.destroy();
+    console.log('清理占位符记录完成');
+    
+    console.log('MessageNotification表初始化完成');
+  } catch (error: any) {
+    console.error('初始化MessageNotification表失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 初始化 BadgeWallSettings 数据表
+ */
+export const initBadgeWallSettingsTable = async (): Promise<void> => {
+  try {
+    // 获取当前用户
+    const currentUser = AV.User.current();
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+
+    console.log('开始创建BadgeWallSettings表结构...');
+
+    // 直接创建一个临时的 BadgeWallSettings 记录来建立数据表结构
+    const BadgeWallSettingsClass = AV.Object.extend('BadgeWallSettings');
+    const placeholderSettings = new BadgeWallSettingsClass();
+    
+    placeholderSettings.set('userId', currentUser.id);
+    placeholderSettings.set('isEnabled', false);
+    
+    const savedSettings = await placeholderSettings.save();
+    console.log('BadgeWallSettings表创建成功');
+    
+    // 立即删除占位符记录
+    await savedSettings.destroy();
+    console.log('清理占位符记录完成');
+    
+    console.log('BadgeWallSettings表初始化完成');
+  } catch (error: any) {
+    console.error('初始化BadgeWallSettings表失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 初始化 Badge 数据表
+ */
+export const initBadgeTable = async (): Promise<void> => {
+  try {
+    // 获取当前用户
+    const currentUser = AV.User.current();
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+
+    console.log('开始创建Badge表结构...');
+
+    // 直接创建一个临时的 Badge 记录来建立数据表结构
+    const BadgeClass = AV.Object.extend('Badge');
+    const placeholderBadge = new BadgeClass();
+    
+    placeholderBadge.set('title', '_PLACEHOLDER_BADGE_');
+    placeholderBadge.set('description', '_PLACEHOLDER_DESCRIPTION_');
+    placeholderBadge.set('icon', 'trophy');
+    placeholderBadge.set('color', '#1890ff');
+    placeholderBadge.set('giverUserId', currentUser.id);
+    placeholderBadge.set('giverUsername', currentUser.get('username'));
+    placeholderBadge.set('receiverUserId', currentUser.id);
+    placeholderBadge.set('receiverUsername', currentUser.get('username'));
+    placeholderBadge.set('likes', 0);
+    placeholderBadge.set('likedBy', []);
+    placeholderBadge.set('isDisplayed', false);
+    
+    const savedBadge = await placeholderBadge.save();
+    console.log('Badge表创建成功');
+    
+    // 立即删除占位符记录
+    await savedBadge.destroy();
+    console.log('清理占位符记录完成');
+    
+    console.log('Badge表初始化完成');
+  } catch (error: any) {
+    console.error('初始化Badge表失败:', error);
+    throw error;
+  }
+};
+
+/**
  * 检查并初始化所有数据表（包含示例数据）
  */
 export const checkAndInitData = async (): Promise<boolean> => {
@@ -238,6 +389,10 @@ export const checkAndInitData = async (): Promise<boolean> => {
     await initDailyVoteTable();
     await initWeekendTeamTable();
     await initUserFavoriteTable();
+    await initMessageTable();
+    await initMessageNotificationTable();
+    await initBadgeWallSettingsTable();
+    await initBadgeTable();
     
     console.log('所有数据表和示例数据初始化完成');
     return true;
@@ -321,6 +476,18 @@ export const manualInitTables = async (): Promise<void> => {
     
     console.log('4. 初始化 UserFavorite 表...');
     await initUserFavoriteTable();
+    
+    console.log('5. 初始化 Message 表...');
+    await initMessageTable();
+    
+    console.log('6. 初始化 MessageNotification 表...');
+    await initMessageNotificationTable();
+    
+    console.log('7. 初始化 BadgeWallSettings 表...');
+    await initBadgeWallSettingsTable();
+    
+    console.log('8. 初始化 Badge 表...');
+    await initBadgeTable();
     
     console.log('✅ 所有数据表初始化完成！');
     alert('数据表初始化完成！');
@@ -414,6 +581,74 @@ export const quickFixMissingTables = async (): Promise<void> => {
             }
           }
         }
+      },
+      {
+        name: 'Message表',
+        fn: async () => {
+          try {
+            const query = new AV.Query('Message');
+            query.limit(1);
+            await query.find();
+            console.log('✅ Message表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建Message表...');
+              await initMessageTable();
+              console.log('✅ Message表创建成功');
+            }
+          }
+        }
+      },
+      {
+        name: 'MessageNotification表',
+        fn: async () => {
+          try {
+            const query = new AV.Query('MessageNotification');
+            query.limit(1);
+            await query.find();
+            console.log('✅ MessageNotification表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建MessageNotification表...');
+              await initMessageNotificationTable();
+              console.log('✅ MessageNotification表创建成功');
+            }
+          }
+        }
+      },
+      {
+        name: 'BadgeWallSettings表',
+        fn: async () => {
+          try {
+            const query = new AV.Query('BadgeWallSettings');
+            query.limit(1);
+            await query.find();
+            console.log('✅ BadgeWallSettings表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建BadgeWallSettings表...');
+              await initBadgeWallSettingsTable();
+              console.log('✅ BadgeWallSettings表创建成功');
+            }
+          }
+        }
+      },
+      {
+        name: 'Badge表',
+        fn: async () => {
+          try {
+            const query = new AV.Query('Badge');
+            query.limit(1);
+            await query.find();
+            console.log('✅ Badge表已存在');
+          } catch (error: any) {
+            if (error.code === 404) {
+              console.log('📝 创建Badge表...');
+              await initBadgeTable();
+              console.log('✅ Badge表创建成功');
+            }
+          }
+        }
       }
     ];
 
@@ -428,7 +663,7 @@ export const quickFixMissingTables = async (): Promise<void> => {
     }
 
     console.log('🎉 快速修复完成！');
-    alert('数据表修复完成！请刷新页面查看效果。');
+    alert('数据表修复完成！请刷新页面重试。');
   } catch (error: any) {
     console.error('❌ 快速修复失败:', error);
     alert(`修复失败: ${error.message}`);
@@ -780,8 +1015,19 @@ export const quickFix403 = async (): Promise<void> => {
   }
 };
 
-// 暴露到全局作用域，方便开发调试
-declare global {
+// 在开发环境中暴露调试函数到 window 对象
+if (process.env.NODE_ENV === 'development') {
+  (window as any).manualInitTables = manualInitTables;
+  (window as any).quickFixMissingTables = quickFixMissingTables;
+  (window as any).migrateFavoriteData = migrateFavoriteData;
+  (window as any).checkFavoriteDataConsistency = checkFavoriteDataConsistency;
+  (window as any).fixFavoriteDataConsistency = fixFavoriteDataConsistency;
+  (window as any).diagnose403Error = diagnose403Error;
+  (window as any).quickFix403 = quickFix403;
+  (window as any).initBadgeWallSettingsTable = initBadgeWallSettingsTable;
+  (window as any).initBadgeTable = initBadgeTable;
+  
+  // TypeScript 接口声明
   interface Window {
     manualInitTables: typeof manualInitTables;
     quickFixMissingTables: typeof quickFixMissingTables;
@@ -790,15 +1036,7 @@ declare global {
     fixFavoriteDataConsistency: typeof fixFavoriteDataConsistency;
     diagnose403Error: typeof diagnose403Error;
     quickFix403: typeof quickFix403;
+    initBadgeWallSettingsTable: typeof initBadgeWallSettingsTable;
+    initBadgeTable: typeof initBadgeTable;
   }
-}
-
-if (typeof window !== 'undefined') {
-  window.manualInitTables = manualInitTables;
-  window.quickFixMissingTables = quickFixMissingTables;
-  window.migrateFavoriteData = migrateFavoriteData;
-  window.checkFavoriteDataConsistency = checkFavoriteDataConsistency;
-  window.fixFavoriteDataConsistency = fixFavoriteDataConsistency;
-  window.diagnose403Error = diagnose403Error;
-  window.quickFix403 = quickFix403;
 } 

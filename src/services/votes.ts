@@ -74,6 +74,148 @@ export const getTodayVote = async (userId: string): Promise<DailyVote | null> =>
 };
 
 /**
+ * 验证投票记录是否在数据库中真实存在
+ * @param voteId 投票记录ID
+ * @returns 是否存在
+ */
+export const verifyVoteExists = async (voteId: string): Promise<boolean> => {
+  try {
+    const query = new AV.Query('DailyVote');
+    const result = await query.get(voteId);
+    return !!result;
+  } catch (error: any) {
+    console.log(`验证投票记录 ${voteId} 不存在:`, error.code);
+    return false;
+  }
+};
+
+/**
+ * 投票提交前的缓存验证和清理
+ * @param userId 用户ID
+ * @returns 清理后的状态
+ */
+export const validateAndCleanVoteCache = async (userId: string): Promise<{ shouldCreateNew: boolean; cachedVote: DailyVote | null }> => {
+  console.log('🔍 开始执行投票提交前验证...');
+  
+  // 获取缓存中的投票记录
+  const cachedVote = await getCachedTodayVote(userId);
+  
+  if (!cachedVote) {
+    console.log('✅ 缓存中无投票记录，将创建新记录');
+    return { shouldCreateNew: true, cachedVote: null };
+  }
+  
+  // 验证缓存中的记录是否在数据库中真实存在
+  const exists = await verifyVoteExists(cachedVote.objectId);
+  
+  if (!exists) {
+    console.log('❌ 缓存中的投票记录在数据库中不存在，清除缓存并准备创建新记录');
+    // 清除该用户的投票缓存
+    clearVotesCaches(userId);
+    return { shouldCreateNew: true, cachedVote: null };
+  }
+  
+  console.log('✅ 缓存中的投票记录验证通过，将更新现有记录');
+  return { shouldCreateNew: false, cachedVote };
+};
+
+/**
+ * 页面初始化时的缓存验证和清理
+ * @param userId 用户ID
+ * @returns 是否需要显示警告提示
+ */
+export const validateCacheOnPageInit = async (userId: string): Promise<boolean> => {
+  if (!userId) return false;
+  
+  try {
+    // 动态导入缓存相关函数
+    const { 
+      getCachedTodayVote, 
+      clearVotesCaches, 
+      performCacheHealthCheck 
+    } = await import('./dataCache');
+    
+    console.log('🔍 开始执行增强的缓存检查...');
+    
+    // 执行全局缓存健康检查
+    performCacheHealthCheck();
+    
+    // 检查当前用户的投票缓存
+    const cachedVote = await getCachedTodayVote(userId);
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (cachedVote) {
+      // 1. 检查缓存日期是否匹配
+      if (cachedVote.date !== today) {
+        console.warn(`❌ 检测到日期不匹配的缓存: 缓存日期=${cachedVote.date}, 今日=${today}`);
+        clearVotesCaches(userId);
+        console.log('✅ 已清除该用户的过期投票缓存');
+        return false;
+      } else {
+        console.log('✅ 投票缓存日期检查通过');
+        
+        // 2. 验证缓存中的投票记录是否在数据库中真实存在
+        console.log('🔍 开始验证缓存投票记录的真实性...');
+        const exists = await verifyVoteExists(cachedVote.objectId);
+        
+        if (!exists) {
+          console.warn(`❌ 缓存中的投票记录 ${cachedVote.objectId} 在数据库中不存在，清除缓存`);
+          clearVotesCaches(userId);
+          console.log('✅ 已清除无效的投票缓存');
+          return true; // 返回true表示需要显示警告提示
+        } else {
+          console.log('✅ 缓存投票记录验证通过，数据库中存在对应记录');
+        }
+      }
+    } else {
+      console.log('🔍 缓存中无投票记录');
+    }
+    
+    console.log('🎯 增强的缓存检查完成');
+    return false;
+  } catch (error) {
+    console.error('❌ 缓存检查过程中发生错误:', error);
+    return false;
+  }
+};
+
+/**
+ * 表单提交前的简化验证
+ * @param userId 用户ID
+ * @returns 是否通过验证
+ */
+export const validateBeforeSubmit = async (userId: string): Promise<boolean> => {
+  if (!userId) {
+    console.error('❌ 用户未登录');
+    return false;
+  }
+
+  try {
+    // 如果存在缓存的投票记录，验证其真实性
+    const { getCachedTodayVote, clearVotesCaches } = await import('./dataCache');
+    const cachedVote = await getCachedTodayVote(userId);
+    
+    if (cachedVote) {
+      console.log('🔍 提交前验证缓存记录的真实性...');
+      const exists = await verifyVoteExists(cachedVote.objectId);
+      
+      if (!exists) {
+        console.warn('❌ 提交前检测到缓存记录不存在，自动清除缓存');
+        clearVotesCaches(userId);
+        console.log('✅ 缓存已清除，将创建新记录');
+      } else {
+        console.log('✅ 提交前验证通过，缓存记录有效');
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ 提交前验证失败:', error);
+    return true; // 即使验证失败，也允许提交，让后续逻辑处理
+  }
+};
+
+/**
  * 提交今日投票
  * @param userId 用户ID
  * @param voteForm 投票表单数据
@@ -87,16 +229,19 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
     const currentUser = AV.User.current();
     const userName = currentUser?.get('nickname') || currentUser?.get('username') || `用户${userId.slice(-4)}`;
     
-    // 先查看是否已有今日投票记录
-    const existingVote = await getTodayVote(userId);
+    console.log('🚀 开始提交投票，执行预验证...');
+    
+    // 🔍 投票提交前验证：检查缓存记录的真实性
+    const { shouldCreateNew, cachedVote } = await validateAndCleanVoteCache(userId);
     
     let vote: AV.Object | null = null;
     let isUpdating = false;
     
-    if (existingVote) {
-      // 尝试更新现有投票
+    if (!shouldCreateNew && cachedVote) {
+      // 缓存记录验证通过，准备更新现有记录
       try {
-        vote = AV.Object.createWithoutData('DailyVote', existingVote.objectId);
+        console.log(`📝 准备更新现有投票记录: ${cachedVote.objectId}`);
+        vote = AV.Object.createWithoutData('DailyVote', cachedVote.objectId);
         vote.set('wantsToPlay', voteForm.wantsToPlay);
         vote.set('selectedGames', voteForm.selectedGames);
         vote.set('gamePreferences', voteForm.gamePreferences || []);
@@ -104,14 +249,17 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
         vote.set('user', userName);
         vote.set('userId', userId);
         isUpdating = true;
+        console.log('✅ 更新对象创建成功');
       } catch (error) {
-        console.warn('创建更新对象失败，将创建新记录:', error);
+        console.warn('❌ 创建更新对象失败，将创建新记录:', error);
         vote = null;
+        isUpdating = false;
       }
     }
     
-    // 如果没有现有记录或者更新对象创建失败，创建新投票
-    if (!vote) {
+    // 如果验证失败或需要创建新记录
+    if (shouldCreateNew || !vote) {
+      console.log('📝 创建新的投票记录');
       vote = new AV.Object('DailyVote');
       vote.set('date', today);
       vote.set('user', userName);  // 存储用户昵称
@@ -125,14 +273,15 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
     let result: AV.Object;
     
     try {
+      console.log(`💾 开始保存投票记录 (${isUpdating ? '更新' : '创建'})`);
       result = await vote.save();
-      console.log('投票保存成功:', result.id);
+      console.log('✅ 投票保存成功:', result.id);
     } catch (saveError: any) {
-      console.error('保存投票时发生错误:', saveError);
+      console.error('❌ 保存投票时发生错误:', saveError);
       
-      // 如果是404错误（记录不存在），清除缓存并创建新记录
+      // 如果是404错误（记录不存在），强制清除缓存并创建新记录
       if (saveError.code === 404) {
-        console.warn('投票记录不存在（404错误），清除缓存并创建新记录');
+        console.warn('🔄 投票记录不存在（404错误），强制清除缓存并创建新记录');
         console.log('错误详情:', {
           code: saveError.code,
           message: saveError.message,
@@ -140,11 +289,14 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
           voteId: isUpdating ? vote?.id : 'new'
         });
         
-        // 清除相关缓存
-        clearVotesCaches();
-        console.log('缓存已清除');
+        // 🧹 强制清除所有相关缓存
+        console.log('🧹 强制清除所有相关缓存...');
+        clearVotesCaches(userId);  // 清除用户投票缓存
+        clearVotesCaches();        // 清除所有投票统计缓存
+        console.log('✅ 缓存清除完成');
         
-        // 无论什么情况，都创建新记录
+        // 💪 无论什么情况，都创建新记录
+        console.log('🔄 创建全新的投票记录...');
         vote = new AV.Object('DailyVote');
         vote.set('date', today);
         vote.set('user', userName);
@@ -153,20 +305,24 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
         vote.set('selectedGames', voteForm.selectedGames);
         vote.set('gamePreferences', voteForm.gamePreferences || []);
         
-        console.log('正在创建新的投票记录...');
-        result = await vote.save();
-        console.log('新投票记录创建成功:', result.id);
+        try {
+          result = await vote.save();
+          console.log('✅ 新投票记录创建成功:', result.id);
+        } catch (retryError: any) {
+          console.error('❌ 重试创建投票记录失败:', retryError);
+          throw retryError;
+        }
       } else {
         // 其他错误，直接抛出
-        console.error('非404错误，直接抛出:', saveError);
+        console.error('❌ 非404错误，直接抛出:', saveError);
         throw saveError;
       }
     }
     
-    // 清除相关缓存
-    clearVotesCaches();
+    // 🧹 清除相关缓存以确保数据同步
+    clearVotesCaches(userId);
     
-    return {
+    const finalVote: DailyVote = {
       objectId: result.id || '',
       date: result.get('date'),
       user: result.get('user'),
@@ -177,19 +333,23 @@ export const submitTodayVote = async (userId: string, voteForm: VoteForm): Promi
       createdAt: result.get('createdAt'),
       updatedAt: result.get('updatedAt'),
     };
+    
+    console.log('🎉 投票提交完成:', finalVote.objectId);
+    return finalVote;
+    
   } catch (error: any) {
-    console.error('提交投票失败:', error);
+    console.error('❌ 提交投票失败:', error);
     
     // 如果是404错误（表不存在），尝试初始化表
     if (error.code === 404 && error.message?.includes('doesn\'t exists')) {
-      console.log('DailyVote表不存在，尝试自动创建...');
+      console.log('📋 DailyVote表不存在，尝试自动创建...');
       try {
         await initDailyVoteTable();
-        console.log('DailyVote表创建成功，重新尝试提交...');
+        console.log('✅ DailyVote表创建成功，重新尝试提交...');
         // 重新执行提交
         return await submitTodayVote(userId, voteForm);
       } catch (initError) {
-        console.error('自动创建DailyVote表失败:', initError);
+        console.error('❌ 自动创建DailyVote表失败:', initError);
       }
     }
     

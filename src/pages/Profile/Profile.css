@@ -85,15 +85,23 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
+/* 个人统计数据项样式 */
 .stat-item {
   margin-bottom: 16px;
-  padding: 12px;
-  background: #fafafa;
-  border-radius: 6px;
 }
 
 .stat-item:last-child {
   margin-bottom: 0;
+}
+
+/* 统计标签页特殊样式 */
+.ant-tabs-tab-active .anticon-star {
+  color: #faad14 !important;
+}
+
+/* 勋章墙标签页特殊样式 */
+.ant-tabs-tab-active .anticon-trophy {
+  color: #faad14 !important;
 }
 
 /* 响应式设计 */
