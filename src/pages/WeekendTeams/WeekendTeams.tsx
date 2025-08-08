@@ -16,6 +16,8 @@ import {
   message,
   Select,
   Modal,
+  Switch,
+  Divider,
   DatePicker
 } from 'antd';
 import {
@@ -34,6 +36,8 @@ import PageHeader from '../../components/common/PageHeader';
 import CreateTeamModal from '../../components/ui/CreateTeamModal';
 import TeamDetailsModal from '../../components/ui/TeamDetailsModal';
 import JoinTeamModal from '../../components/ui/JoinTeamModal';
+import { getAllGames } from '../../services/games';
+import { Game } from '../../types/game';
 
 
 const { Option } = Select;
@@ -61,18 +65,24 @@ const WeekendTeams: React.FC = () => {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamDetails | null>(null);
+  const [gamesForFilter, setGamesForFilter] = useState<Game[]>([]);
 
   /**
    * 初始化页面数据
    */
   useEffect(() => {
-    // 设置默认筛选条件：从今天开始
-    const today = dayjs().format('YYYY-MM-DD');
-    setFilters({
-      ...filters,
-      startDate: today
-    });
-  }, []);
+    fetchTeams();
+    // 获取用于筛选的游戏列表
+    const fetchGamesForFilter = async () => {
+      try {
+        const allGames = await getAllGames();
+        setGamesForFilter(allGames);
+      } catch (error) {
+        message.error('加载游戏列表失败');
+      }
+    };
+    fetchGamesForFilter();
+  }, [fetchTeams]);
 
   /**
    * 处理查看详情
@@ -155,6 +165,38 @@ const WeekendTeams: React.FC = () => {
   };
 
   /**
+   * 处理游戏筛选变化
+   */
+  const handleGameChange = (value: string) => {
+    setFilters({ ...filters, gameId: value });
+  };
+
+  /**
+   * 处理日期筛选变化
+   */
+  const handleDateChange = (date: any, dateString: string | string[]) => {
+    const finalDate = Array.isArray(dateString) ? dateString[0] : dateString;
+    setFilters({ ...filters, eventDate: finalDate });
+  };
+
+  /**
+   * 处理状态筛选变化
+   */
+  const handleStatusChange = (value: 'open' | 'full' | 'closed') => {
+    setFilters({ ...filters, status: value });
+  };
+
+  /**
+   * 处理显示过期组队开关变化
+   */
+  const handleShowExpiredChange = (checked: boolean) => {
+    setFilters({ 
+      ...filters, 
+      showExpired: checked 
+    });
+  };
+
+  /**
    * 手动修复组队数据表
    */
   const handleManualFixTeams = async () => {
@@ -204,7 +246,7 @@ const WeekendTeams: React.FC = () => {
       />
 
       <div style={{ marginBottom: 24 }}>
-        <Row justify="space-between" align="middle">
+        <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col>
             <Space>
               <CalendarOutlined />
@@ -212,24 +254,66 @@ const WeekendTeams: React.FC = () => {
             </Space>
           </Col>
           <Col>
-            <Space>
-              <SortAscendingOutlined />
-              <span>排序：</span>
-              <Select
-                style={{ width: 140 }}
-                placeholder="选择排序方式"
-                value={filters.sortBy ? `${filters.sortBy}:${filters.sortOrder || 'desc'}` : undefined}
-                onChange={handleSortChange}
+            <Space wrap split={<Divider type="vertical" />}>
+               {/* 游戏筛选 */}
+               <Select
+                style={{ width: 150 }}
+                placeholder="筛选游戏"
+                value={filters.gameId}
+                onChange={handleGameChange}
                 allowClear
               >
-                <Option value="createdAt:desc">🆕 最新创建</Option>
-                <Option value="memberCount:desc">👥 人数最多</Option>
-                <Option value="memberCount:asc">👤 人数最少</Option>
-                <Option value="startTime:asc">⏰ 时间最早</Option>
-                <Option value="startTime:desc">⏰ 时间最晚</Option>
-                <Option value="eventDate:asc">📅 日期最近</Option>
-                <Option value="eventDate:desc">📅 日期最远</Option>
+                {gamesForFilter.map(game => (
+                  <Option key={game.objectId} value={game.objectId}>{game.name}</Option>
+                ))}
               </Select>
+              
+              {/* 日期筛选 */}
+              <DatePicker 
+                placeholder="筛选日期"
+                onChange={handleDateChange}
+                allowClear
+              />
+
+              {/* 状态筛选 */}
+              <Select
+                style={{ width: 120 }}
+                placeholder="筛选状态"
+                value={filters.status}
+                onChange={handleStatusChange}
+                allowClear
+              >
+                <Option value="open">招募中</Option>
+                <Option value="full">已满员</Option>
+              </Select>
+
+              {/* 排序 */}
+              <Space>
+                <SortAscendingOutlined />
+                <Select
+                  style={{ width: 140 }}
+                  placeholder="选择排序方式"
+                  value={filters.sortBy ? `${filters.sortBy}:${filters.sortOrder || 'desc'}` : undefined}
+                  onChange={handleSortChange}
+                  allowClear
+                >
+                  <Option value="createdAt:desc">🆕 最新创建</Option>
+                  <Option value="memberCount:desc">👥 人数最多</Option>
+                  <Option value="memberCount:asc">👤 人数最少</Option>
+                  <Option value="startTime:asc">⏰ 时间最早</Option>
+                  <Option value="startTime:desc">⏰ 时间最晚</Option>
+                  <Option value="eventDate:asc">📅 日期最近</Option>
+                  <Option value="eventDate:desc">📅 日期最远</Option>
+                </Select>
+              </Space>
+              {/* 显示过期开关 */}
+              <Space>
+                <span>显示过期</span>
+                <Switch 
+                  checked={filters.showExpired} 
+                  onChange={handleShowExpiredChange} 
+                />
+              </Space>
             </Space>
           </Col>
         </Row>
@@ -345,7 +429,7 @@ const WeekendTeams: React.FC = () => {
               icon={<PlusOutlined />}
               onClick={() => setCreateModalVisible(true)}
             >
-              创建第一个组队
+              创建一个组队
             </Button>
           </Empty>
         </Card>

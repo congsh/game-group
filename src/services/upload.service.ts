@@ -345,39 +345,14 @@ class UploadService {
    * 优先从服务器获取，开发环境可使用本地生成
    */
   private async getQiniuToken(): Promise<string> {
-    // 开发环境下优先使用本地生成
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        return this.generateQiniuToken();
-      } catch (error) {
-        console.error('七牛云配置错误:', error);
-        // 开发环境下，如果配置不完整，尝试使用模拟token
-        console.warn('开发环境七牛云配置不完整，使用模拟token');
-        return 'mock_qiniu_token_for_development';
-      }
-    }
-    
-    // 生产环境从服务器获取
+    // 移除环境判断，始终在客户端生成Token
+    // 警告：这会在生产环境中暴露AK/SK，仅适用于无后端或纯前端演示项目
     try {
-      const response = await fetch('/api/qiniu/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return data.token;
-      } else {
-        console.error('服务器返回错误状态:', response.status, response.statusText);
-      }
+      return this.generateQiniuToken();
     } catch (error) {
-      console.error('从服务器获取凭证失败:', error);
+      console.error('七牛云配置错误:', error);
+      throw new Error('七牛云配置不完整。请在环境变量中配置 QINIU_AK, QINIU_SK, QINIU_BUCKET 等。');
     }
-    
-    throw new Error('无法获取上传凭证，请检查服务器配置');
   }
 
   /**
@@ -557,7 +532,7 @@ class UploadService {
       // 如果服务器端API不可用，在开发环境下可以尝试直接删除
       if (process.env.NODE_ENV === 'development') {
         console.warn('服务器删除API不可用，开发环境下跳过删除操作');
-        return true;
+        throw new Error('云存储删除失败：开发服务器无法处理删除API。');
       }
       throw error;
     }

@@ -80,6 +80,7 @@ export interface FileUploadForm {
   category: 'image' | 'video' | 'audio' | 'document' | 'other';
   allowDownload: boolean;
   allowComment: boolean;
+  isPublic: boolean;                // 是否公开访问
 }
 
 // 文件查询参数

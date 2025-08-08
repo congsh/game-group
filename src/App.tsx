@@ -23,6 +23,7 @@ import Profile from './pages/Profile/Profile';
 import FileShare from './pages/FileShare/FileShare';
 import MessageBoard from './pages/MessageBoard/MessageBoard';
 import BadgeWalls from './pages/BadgeWalls/BadgeWalls';
+import OverwatchChatCodes from './pages/OverwatchChatCodes/OverwatchChatCodes';
 import { checkAndInitData } from './utils/initData';
 import './utils/debug-auth'; // 导入调试工具（开发环境下会自动启用）
 import './App.css';
@@ -232,6 +233,16 @@ const AppContent: React.FC = () => {
               <ProtectedRoute>
                 <LayoutWrapper>
                   <BadgeWalls />
+                </LayoutWrapper>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/chat-codes" 
+            element={
+              <ProtectedRoute>
+                <LayoutWrapper>
+                  <OverwatchChatCodes />
                 </LayoutWrapper>
               </ProtectedRoute>
             } 

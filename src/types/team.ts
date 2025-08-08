@@ -43,12 +43,12 @@ export interface JoinTeamForm {
 export interface TeamFilters {
   gameId?: string;
   eventDate?: string;
+  startDate?: string;     // 开始日期筛选 (YYYY-MM-DD)
+  endDate?: string;       // 结束日期筛选 (YYYY-MM-DD)
   status?: 'open' | 'full' | 'closed';
   sortBy?: 'eventDate' | 'createdAt' | 'memberCount' | 'startTime';  // 扩展排序选项
   sortOrder?: 'asc' | 'desc';
-  // 日期筛选范围
-  startDate?: string;  // 起始日期 (YYYY-MM-DD)
-  endDate?: string;    // 结束日期 (YYYY-MM-DD)
+  showExpired?: boolean; // 新增：是否显示已过期的组队
 }
 
 export interface TeamDetails extends WeekendTeam {
