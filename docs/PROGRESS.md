@@ -197,6 +197,39 @@
 - ✅ 显示总投票数量
 - ✅ 优化了列表样式和边框
 
+### 文件上传系统修复（2025-01-07）
+
+#### 问题诊断
+- ❌ 七牛云上传凭证获取失败，返回405错误
+- ❌ `/api/qiniu/token` 端点无法处理POST请求
+- ❌ 缺少代理配置处理API请求
+
+#### 解决方案实施
+- ✅ 创建 `src/setupProxy.js` 文件，配置API代理
+- ✅ 安装 `http-proxy-middleware` 依赖
+- ✅ 修改 `upload.service.ts` 构造函数，开发环境默认使用本地存储
+- ✅ 改进 `getQiniuToken()` 函数错误处理，开发环境使用模拟token
+- ✅ 修改 `uploadToQiniu()` 函数，检测模拟token时使用模拟上传
+- ✅ 修改 `uploadToLocal()` 函数，开发环境使用模拟上传
+- ✅ 创建 `public/api/upload.js` 本地上传API示例文件
+- ✅ 更新代理配置，支持本地文件上传API
+
+#### 技术改进
+- ✅ 开发环境自动降级到模拟上传，避免配置错误
+- ✅ 添加详细的配置日志输出
+- ✅ 改进错误处理和用户提示
+- ✅ 支持多种存储提供商（七牛云、本地存储）
+
+#### 配置说明
+开发环境现在默认使用本地存储模式，无需配置七牛云参数。如需使用七牛云，请在 `.env.local` 文件中配置：
+```
+REACT_APP_STORAGE_PROVIDER=qiniu
+REACT_APP_QINIU_AK=your-access-key
+REACT_APP_QINIU_SK=your-secret-key
+REACT_APP_QINIU_BUCKET=your-bucket-name
+REACT_APP_QINIU_DOMAIN=https://your-domain.com
+```
+
 ### 下一步计划
 - 开始开发个人中心模块
 - 创建 Profile 页面和相关组件

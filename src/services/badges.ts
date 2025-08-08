@@ -7,6 +7,42 @@ import AV from 'leancloud-storage';
 import { Badge, BadgeWallSettings, CreateBadgeRequest, BadgeWallData, BadgeLikeRequest } from '../types/badge';
 
 class BadgeService {
+  private requestQueue: Promise<any> = Promise.resolve();
+  private userCache = new Map<string, { username: string; timestamp: number }>();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+  private readonly REQUEST_DELAY = 100; // 请求间隔100ms
+
+  /**
+   * 添加请求到队列中，避免并发请求过多
+   */
+  private async queueRequest<T>(requestFn: () => Promise<T>): Promise<T> {
+    this.requestQueue = this.requestQueue.then(async () => {
+      await new Promise(resolve => setTimeout(resolve, this.REQUEST_DELAY));
+      return requestFn();
+    });
+    return this.requestQueue;
+  }
+
+  /**
+   * 获取缓存的用户信息
+   */
+  private getCachedUser(userId: string): { username: string } | null {
+    const cached = this.userCache.get(userId);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return { username: cached.username };
+    }
+    return null;
+  }
+
+  /**
+   * 缓存用户信息
+   */
+  private setCachedUser(userId: string, username: string): void {
+    this.userCache.set(userId, {
+      username,
+      timestamp: Date.now()
+    });
+  }
   /**
    * 获取用户的勋章墙设置
    */
@@ -111,10 +147,13 @@ class BadgeService {
    */
   async getUserBadges(userId: string): Promise<Badge[]> {
     try {
-      const query = new AV.Query('Badge');
-      query.equalTo('receiverUserId', userId);
-      query.descending('createdAt');
-      const badges = await query.find();
+      // 使用请求队列避免并发过多
+      const badges = await this.queueRequest(async () => {
+        const query = new AV.Query('Badge');
+        query.equalTo('receiverUserId', userId);
+        query.descending('createdAt');
+        return await query.find();
+      });
 
       return badges.map(badge => ({
         objectId: badge.id || '',
@@ -251,23 +290,48 @@ class BadgeService {
 
       const userIds = settings.map(setting => setting.get('userId'));
       
-      // 获取用户信息和勋章数量
-      const results = await Promise.all(
-        userIds.map(async (userId) => {
-          const [user, badges] = await Promise.all([
-            this.getUserById(userId),
-            this.getUserBadges(userId)
-          ]);
+      if (userIds.length === 0) {
+        return [];
+      }
 
-          return {
-            userId,
-            username: user?.username || '未知用户',
-            badgeCount: badges.length
-          };
-        })
-      );
+      // 批量获取勋章信息，同时获取用户名
+      const badgeQuery = new AV.Query('Badge');
+      badgeQuery.containedIn('receiverUserId', userIds);
+      badgeQuery.select(['receiverUserId', 'receiverUsername']); // 选择用户ID和用户名字段
+      const badges = await badgeQuery.find();
+      
+      // 创建用户ID到用户名的映射（从Badge表中获取）
+      const userMap = new Map<string, string>();
+      const badgeCountMap = new Map<string, number>();
+      
+      badges.forEach(badge => {
+        const userId = badge.get('receiverUserId');
+        const username = badge.get('receiverUsername');
+        
+        // 设置用户名映射
+        if (userId && username && !userMap.has(userId)) {
+          userMap.set(userId, username);
+        }
+        
+        // 统计勋章数量
+        badgeCountMap.set(userId, (badgeCountMap.get(userId) || 0) + 1);
+      });
 
-      return results.filter(result => result.username !== '未知用户');
+      // 组装结果
+      const results = userIds.map(userId => {
+        const username = userMap.get(userId);
+        if (!username) {
+          // 如果没有勋章记录，用户名可能为空，跳过该用户
+          return null;
+        }
+        return {
+          userId,
+          username,
+          badgeCount: badgeCountMap.get(userId) || 0
+        };
+      }).filter(result => result !== null) as Array<{ userId: string; username: string; badgeCount: number }>;
+
+      return results;
     } catch (error) {
       console.error('获取开启勋章墙的用户失败:', error);
       throw error;
@@ -329,11 +393,27 @@ class BadgeService {
    */
   private async getUserById(userId: string): Promise<{ username: string } | null> {
     try {
-      const query = new AV.Query('_User');
-      const user = await query.get(userId);
-      return {
-        username: user.get('username')
-      };
+      // 先检查缓存
+      const cached = this.getCachedUser(userId);
+      if (cached) {
+        return cached;
+      }
+
+      // 使用请求队列避免并发过多
+      const result = await this.queueRequest(async () => {
+        const query = new AV.Query('_User');
+        const user = await query.get(userId);
+        return {
+          username: user.get('username')
+        };
+      });
+
+      // 缓存结果
+      if (result) {
+        this.setCachedUser(userId, result.username);
+      }
+
+      return result;
     } catch (error) {
       console.error('获取用户信息失败:', error);
       return null;
@@ -341,4 +421,4 @@ class BadgeService {
   }
 }
 
-export const badgeService = new BadgeService(); 
+export const badgeService = new BadgeService();

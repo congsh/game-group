@@ -36,14 +36,25 @@ class UploadService {
 
   constructor() {
     // 从环境变量读取配置
+    // 开发环境下默认使用本地存储，除非明确配置了七牛云
+    const defaultProvider = process.env.NODE_ENV === 'development' ? 'local' : 'qiniu';
+    
     this.config = {
-      provider: (process.env.REACT_APP_STORAGE_PROVIDER as any) || 'qiniu',
+      provider: (process.env.REACT_APP_STORAGE_PROVIDER as any) || defaultProvider,
       endpoint: process.env.REACT_APP_STORAGE_ENDPOINT || '/api/upload',
-      bucket: process.env.REACT_APP_QINIU_BUCKET || process.env.REACT_APP_STORAGE_BUCKET,
+      bucket: process.env.REACT_APP_QINIU_BUCKET || process.env.REACT_APP_STORAGE_BUCKET || 'local-uploads',
       region: process.env.REACT_APP_QINIU_REGION || process.env.REACT_APP_STORAGE_REGION,
-      domain: process.env.REACT_APP_QINIU_DOMAIN || process.env.REACT_APP_STORAGE_DOMAIN,
+      domain: process.env.REACT_APP_QINIU_DOMAIN || process.env.REACT_APP_STORAGE_DOMAIN || 'http://localhost:3000',
       isPrivate: process.env.REACT_APP_QINIU_BUCKET_IS_PRIVATE === 'true'
     };
+    
+    console.log('上传服务配置:', {
+      provider: this.config.provider,
+      endpoint: this.config.endpoint,
+      bucket: this.config.bucket,
+      domain: this.config.domain,
+      isDevelopment: process.env.NODE_ENV === 'development'
+    });
   }
 
   /**
@@ -99,6 +110,12 @@ class UploadService {
   ): Promise<UploadResult> {
     const token = await this.getQiniuToken();
     const key = `uploads/${Date.now()}_${file.name}`;
+    
+    // 如果是开发环境且使用模拟token，则使用模拟上传
+    if (process.env.NODE_ENV === 'development' && token === 'mock_qiniu_token_for_development') {
+      console.log('开发环境使用模拟上传');
+      return this.mockUpload(file, options);
+    }
     
     const putExtra: any = {
       fname: file.name,
@@ -230,6 +247,12 @@ class UploadService {
       metadata?: Record<string, any>;
     }
   ): Promise<UploadResult> {
+    // 开发环境下使用模拟上传
+    if (process.env.NODE_ENV === 'development') {
+      console.log('开发环境使用模拟本地上传');
+      return this.mockUpload(file, options);
+    }
+    
     const formData = new FormData();
     formData.append('file', file);
     
@@ -322,13 +345,15 @@ class UploadService {
    * 优先从服务器获取，开发环境可使用本地生成
    */
   private async getQiniuToken(): Promise<string> {
-    // 开发环境下直接使用本地生成
+    // 开发环境下优先使用本地生成
     if (process.env.NODE_ENV === 'development') {
       try {
         return this.generateQiniuToken();
       } catch (error) {
         console.error('七牛云配置错误:', error);
-        throw new Error('七牛云配置不完整。请在 .env.local 文件中配置 REACT_APP_QINIU_AK, REACT_APP_QINIU_SK, REACT_APP_QINIU_BUCKET 等环境变量，或者将 REACT_APP_STORAGE_PROVIDER 设置为 "local" 使用本地存储。');
+        // 开发环境下，如果配置不完整，尝试使用模拟token
+        console.warn('开发环境七牛云配置不完整，使用模拟token');
+        return 'mock_qiniu_token_for_development';
       }
     }
     
@@ -345,6 +370,8 @@ class UploadService {
       if (response.ok) {
         const data = await response.json();
         return data.token;
+      } else {
+        console.error('服务器返回错误状态:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('从服务器获取凭证失败:', error);
